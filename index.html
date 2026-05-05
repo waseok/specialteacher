@@ -1,0 +1,2962 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>초등 전담·특별실 시간표 편성 보조기</title>
+  <style>
+    :root {
+      --bg: #f4f5f7;
+      --card: #fff;
+      --border: #c9cdd4;
+      --text: #1d2129;
+      --muted: #656c78;
+      --primary: #165dff;
+      --err: #f53f3f;
+      --warn: #ffb020;
+      --ok: #00b578;
+      --sub-science: #d6f3df;
+      --sub-english: #dbeafe;
+      --sub-play: #fef3c7;
+      --sub-pe: #fed7aa;
+      --sub-field: #e7d5b8;
+      --sub-comp: #ddd6fe;
+      --sub-lib: #e5e7eb;
+      --sub-music: #fce7f3;
+      --sub-other: #eef2ff;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; margin: 0; background: var(--bg); color: var(--text); font-size: 14px; }
+    header.app-header { background: #1d2129; color: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    header.app-header h1 { margin: 0; font-size: 18px; font-weight: 700; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 12px; background: #e5e6eb; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
+    .tabs button { border: 1px solid var(--border); background: #fff; padding: 8px 12px; cursor: pointer; border-radius: 4px; font-size: 13px; }
+    .tabs button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    main { padding: 12px; max-width: 1400px; margin: 0 auto; }
+    section.panel { display: none; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    section.panel.active { display: block; }
+    h2 { margin: 0 0 12px; font-size: 16px; }
+    h3 { margin: 16px 0 8px; font-size: 14px; color: var(--muted); }
+    label { display: inline-block; margin: 4px 8px 4px 0; }
+    input[type="text"], input[type="number"], select, textarea { padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; }
+    textarea { width: 100%; min-height: 80px; }
+    table.form-grid td { padding: 4px 8px 4px 0; vertical-align: middle; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; align-items: center; }
+    button.btn { padding: 8px 14px; border-radius: 4px; border: 1px solid var(--border); background: #fff; cursor: pointer; }
+    button.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    button.btn-danger { background: var(--err); color: #fff; border-color: var(--err); }
+    .hint { color: var(--muted); font-size: 12px; margin: 4px 0; }
+    .tt-wrap { overflow-x: auto; margin: 8px 0; }
+    table.timetable { border-collapse: collapse; min-width: 640px; font-size: 12px; }
+    table.timetable th, table.timetable td { border: 1px solid var(--border); padding: 4px 6px; text-align: center; min-width: 72px; position: relative; height: 36px; vertical-align: middle; }
+    table.timetable th { background: #f2f3f5; }
+    td.cell-lesson { cursor: pointer; user-select: none; }
+    td.cell-lesson[draggable="true"] { cursor: grab; }
+    td.conflict-err { outline: 2px solid var(--err); outline-offset: -2px; }
+    td.conflict-warn { outline: 2px solid var(--warn); outline-offset: -2px; }
+    td.locked::after { content: ''; position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23656c78'%3E%3Cpath d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'/%3E%3C/svg%3E") center/contain no-repeat; }
+    .subj-science { background: var(--sub-science); }
+    .subj-english { background: var(--sub-english); }
+    .subj-play { background: var(--sub-play); }
+    .subj-pe { background: var(--sub-pe); }
+    .subj-field { background: var(--sub-field); }
+    .subj-comp { background: var(--sub-comp); }
+    .subj-lib { background: var(--sub-lib); }
+    .subj-music { background: var(--sub-music); }
+    .subj-other { background: var(--sub-other); }
+    .subj-empty { background: #fafafa; }
+    .flex { display: flex; gap: 12px; flex-wrap: wrap; }
+    .grow { flex: 1; min-width: 240px; }
+    ul.msg-list { max-height: 280px; overflow: auto; padding-left: 18px; margin: 8px 0; }
+    ul.msg-list li { cursor: pointer; margin: 4px 0; }
+    ul.msg-list li:hover { text-decoration: underline; }
+    .tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px; }
+    .tag-err { background: #ffecec; color: var(--err); }
+    .tag-warn { background: #fff7e8; color: #b45309; }
+    #modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+    #modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 8px; max-width: 480px; width: 100%; padding: 16px; border: 1px solid var(--border); max-height: 90vh; overflow: auto; }
+    .modal h3 { margin-top: 0; }
+    /* 참조 보기 슬라이드 패널 */
+    #ref-panel { position: fixed; top: 0; right: -420px; width: 420px; height: 100vh; background: #fff; border-left: 2px solid var(--border); z-index: 80; display: flex; flex-direction: column; transition: right .25s ease; box-shadow: -4px 0 16px rgba(0,0,0,.12); }
+    #ref-panel.open { right: 0; }
+    #ref-panel-header { background: #1d2129; color: #fff; padding: 10px 12px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    #ref-panel-header select { flex: 1; font-size: 13px; border-radius: 4px; border: none; padding: 4px 6px; }
+    #ref-panel-header button { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; line-height: 1; padding: 0 4px; }
+    #ref-panel-body { flex: 1; overflow-y: auto; padding: 10px; font-size: 11px; }
+    #ref-panel-body table.timetable { min-width: 0; font-size: 10px; }
+    #ref-panel-body table.timetable th, #ref-panel-body table.timetable td { min-width: 44px; padding: 2px 3px; height: 26px; }
+    #btn-ref-toggle { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 79; background: var(--primary); color: #fff; border: none; border-radius: 6px 0 0 6px; padding: 10px 6px; cursor: pointer; font-size: 12px; writing-mode: vertical-rl; letter-spacing: 1px; }
+    @media print {
+      .tabs, .app-header button, .btn-row button, #modal-overlay, #ref-panel, #btn-ref-toggle { display: none !important; }
+      body { background: #fff; }
+      section.panel { display: block !important; page-break-inside: avoid; border: none; }
+      table.timetable { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <h1>초등 전담·특별실 시간표 편성 보조기</h1>
+    <div class="btn-row" style="margin:0">
+      <button class="btn btn-primary" type="button" id="btn-save-now">지금 저장</button>
+      <button class="btn" type="button" onclick="window.print()">인쇄</button>
+    </div>
+  </header>
+  <nav class="tabs" id="tab-nav" aria-label="메인 탭"></nav>
+  <main id="main-panels"></main>
+
+  <!-- 참조 보기 슬라이드 패널 -->
+  <button id="btn-ref-toggle" title="참조 보기 열기/닫기">참조 보기</button>
+  <div id="ref-panel">
+    <div id="ref-panel-header">
+      <span style="font-size:13px;font-weight:700;white-space:nowrap">참조 보기</span>
+      <select id="ref-panel-select">
+        <option value="teacher">전담 시간표</option>
+        <option value="class">학급별 시간표</option>
+        <option value="room">특별실 시간표</option>
+      </select>
+      <button id="ref-panel-close" title="닫기">✕</button>
+    </div>
+    <div id="ref-panel-body"></div>
+  </div>
+
+  <div id="modal-overlay" role="dialog" aria-modal="true">
+    <div class="modal" id="modal-box">
+      <h3 id="modal-title">편집</h3>
+      <div id="modal-body"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="modal-ok">확인</button>
+        <button class="btn" type="button" id="modal-cancel">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  /* =============================================================================
+     1) 데이터 모델 · 상수
+     ============================================================================= */
+  const STORAGE_KEY = 'tt_state_v1';
+  const DAYS = ['mon','tue','wed','thu','fri'];
+  const DAY_KO = { mon:'월', tue:'화', wed:'수', thu:'목', fri:'금' };
+  const SUBJECT_ORDER = ['과학','영어','놀이','체육','음악','정보','기타'];
+  const GRADES = [1,2,3,4,5,6];
+  const ROOM_KIND_LABEL = {
+    science: '과학실',
+    gym: '체육관',
+    field: '운동장',
+    multi: '다목적실',
+    library: '도서실',
+    music: '음악실',
+    computer2: '2층 컴퓨터실',
+    computer4: '4층 컴퓨터실',
+    other: '기타'
+  };
+  const CORE_ROOM_KINDS = ['science','gym','field','multi','library','music','computer2','computer4','other'];
+
+  /** 기본 state 생성 */
+  function createDefaultState() {
+    const periods = {};
+    GRADES.forEach(g => {
+      periods[g] = { mon:5, tue:5, wed:5, thu:5, fri:5 };
+    });
+    periods[5] = { mon:6, tue:6, wed:6, thu:6, fri:6 };
+    periods[6] = { mon:6, tue:6, wed:6, thu:6, fri:6 };
+    const classCounts = { 1:4, 2:4, 3:4, 4:4, 5:4, 6:4 };
+    return {
+      version: 1,
+      school: { name: '', year: '' },
+      classCounts,
+      periods,
+      lunch: {
+        mode: 'unified',
+        grade5Track: { '1':'A','2':'A','3':'A','4':'A','5':'B','6':'B' }
+      },
+      teachers: [],
+      rooms: defaultRoomsSeed(),
+      roomKindOptions: CORE_ROOM_KINDS.map(k => ({ key:k, label: ROOM_KIND_LABEL[k] || k })),
+      /** 과목별 연차시(2연속) 사용 여부 — 2시간 이상일 때만 적용 */
+      sequentialBlockSubjects: { 과학: true, 영어: false, 놀이: false, 체육: false, 음악: false, 정보: false, 기타: false },
+      /** 과목 → 특별실 종류(kind) 연동. 'none'이면 전담과 별도로 특별실 미러링 안 함 */
+      subjectRoomLinks: { 과학: 'science', 영어: 'none', 놀이: 'multi', 체육: 'gym', 음악: 'music', 정보: 'computer2', 기타: 'none' },
+      /** 학년별 과목 → 특별실 종류(kind) 개별 연동. 값이 없으면 공통 연동값 사용 */
+      subjectRoomLinksByGrade: { 1:{}, 2:{}, 3:{}, 4:{}, 5:{}, 6:{} },
+      gradeSubjectTargets: {
+        1: { 과학:0, 영어:0, 놀이:1, 체육:0, 음악:0, 정보:0, 기타:0 },
+        2: { 과학:0, 영어:0, 놀이:1, 체육:0, 음악:0, 정보:1, 기타:0 },
+        3: { 과학:2, 영어:2, 놀이:0, 체육:1, 음악:1, 정보:1, 기타:0 },
+        4: { 과학:2, 영어:2, 놀이:0, 체육:1, 음악:1, 정보:0, 기타:0 },
+        5: { 과학:3, 영어:3, 놀이:0, 체육:1, 음악:1, 정보:1, 기타:0 },
+        6: { 과학:3, 영어:3, 놀이:0, 체육:1, 음악:1, 정보:0, 기타:0 }
+      },
+      classBans: [],
+      schedule: { byClass: {}, byRoom: {} },
+      locks: [],
+      clipboard: null,
+      generationMeta: { message: '', unplaced: [] },
+      conflicts: { errors: [], warnings: [] },
+      ui: { activeTab: 'basic', highlightKey: null },
+      gradeBans: [ { grade: 1, period: '6' }, { grade: 2, period: '6' } ]
+    };
+  }
+
+  function defaultRoomsSeed() {
+    const mk = (id, name, kind, grades, cap, extra) => ({
+      id, name, kind, allowedGrades: grades, capacity: cap,
+      byClass: kind !== 'library' && kind !== 'music',
+      byGrade: kind === 'library' || kind === 'music',
+      weeklyTarget: 1,
+      bannedSlots: [],
+      afterSchoolOk: kind === 'computer2' || kind === 'computer4',
+      priority: (extra && extra.priority) || 10,
+      ...extra
+    });
+    return [
+      mk('sci3','3학년 과학실','science',[3],1,{ priority:1, weeklyTarget:1 }),
+      mk('sci4','4학년 과학실','science',[4],1,{ priority:2, weeklyTarget:1 }),
+      mk('sci5','5학년 과학실','science',[5],1,{ priority:3, weeklyTarget:1 }),
+      mk('sci6','6학년 과학실','science',[6],1,{ priority:4, weeklyTarget:1 }),
+      mk('gym','체육관','gym',[1,2,3,4,5,6],2,{ priority:5, weeklyTarget:1 }),
+      mk('field','운동장','field',[1,2,3,4,5,6],2,{ priority:6, weeklyTarget:1 }),
+      mk('multi','다목적실','multi',[1,2,3,4,5,6],1,{ priority:7, weeklyTarget:1 }),
+      mk('lib','도서실','library',[1,2,3,4,5,6],3,{ byClass:false, byGrade:true, priority:8, weeklyTarget:1 }),
+      mk('music','음악실','music',[1,2,3,4,5,6],2,{ byClass:false, byGrade:true, priority:1, weeklyTarget:1 }),
+      mk('pc2','2층 컴퓨터실','computer2',[2,3,5],1,{ priority:10, weeklyTarget:1 }),
+      mk('pc4','4층 컴퓨터실','computer4',[1,4,6],1,{ priority:11, weeklyTarget:1 })
+    ];
+  }
+
+  function uid(prefix) {
+    return prefix + '_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,7);
+  }
+
+  /** 학급 키: "3-1" */
+  function classKey(grade, cls) {
+    return grade + '-' + cls;
+  }
+
+  function parseClassKey(k) {
+    const [g,c] = k.split('-');
+    return { grade: parseInt(g,10), classNum: parseInt(c,10) };
+  }
+
+  /** 학년·요일별 사용 가능한 슬롯 키 배열 */
+  function slotsForGradeDay(state, grade, day) {
+    const maxP = state.periods[grade][day];
+    const split = state.lunch.mode !== 'unified';
+    const list = [];
+    for (let i = 1; i <= Math.min(4, maxP); i++) list.push(String(i));
+    if (maxP >= 5) {
+      if (split) {
+        const tr = (state.lunch.grade5Track[String(grade)] || 'A');
+        list.push(tr === 'A' ? '5A' : '5B');
+      } else {
+        list.push('5');
+      }
+    }
+    if (maxP >= 6) list.push('6');
+    return list;
+  }
+
+  /** 학년 전체(표 헤더용) 슬롯 — 요일 중 최대 교시 기준 */
+  function slotsForGrade(state, grade) {
+    const pe = state.periods[grade];
+    const maxP = Math.max(pe.mon, pe.tue, pe.wed, pe.thu, pe.fri);
+    const split = state.lunch.mode !== 'unified';
+    const list = [];
+    for (let i = 1; i <= Math.min(4, maxP); i++) list.push(String(i));
+    if (maxP >= 5) {
+      if (split) {
+        const tr = (state.lunch.grade5Track[String(grade)] || 'A');
+        list.push(tr === 'A' ? '5A' : '5B');
+      } else {
+        list.push('5');
+      }
+    }
+    if (maxP >= 6) list.push('6');
+    return list;
+  }
+
+  function slotLabel(s) {
+    if (s === '5A') return '5A';
+    if (s === '5B') return '5B';
+    return s + '교시';
+  }
+
+  /** 특별실 우선순위를 중복 없이 1..N으로 재정렬 */
+  function normalizeRoomPriorities(st, movedRoomId, desiredPriority) {
+    const rows = (st.rooms || []).map((r, idx) => ({ r, idx }));
+    rows.sort((a, b) => {
+      if (movedRoomId && a.r.id === movedRoomId) return -1;
+      if (movedRoomId && b.r.id === movedRoomId) return 1;
+      return (a.r.priority || 0) - (b.r.priority || 0) || a.idx - b.idx;
+    });
+    if (movedRoomId) {
+      const from = rows.findIndex(x => x.r.id === movedRoomId);
+      if (from >= 0) {
+        const row = rows.splice(from, 1)[0];
+        const target = Math.max(0, Math.min(rows.length, (desiredPriority || 1) - 1));
+        rows.splice(target, 0, row);
+      }
+    }
+    rows.forEach((x, i) => { x.r.priority = i + 1; });
+  }
+
+  function ensureScheduleBuckets(state) {
+    const classes = listAllClassKeys(state);
+    classes.forEach(ck => {
+      if (!state.schedule.byClass[ck]) state.schedule.byClass[ck] = {};
+      DAYS.forEach(d => {
+        if (!state.schedule.byClass[ck][d]) state.schedule.byClass[ck][d] = {};
+      });
+    });
+    state.rooms.forEach(r => {
+      if (!state.schedule.byRoom[r.id]) state.schedule.byRoom[r.id] = {};
+      DAYS.forEach(d => {
+        if (!state.schedule.byRoom[r.id][d]) state.schedule.byRoom[r.id][d] = {};
+      });
+    });
+  }
+
+  function listAllClassKeys(state) {
+    const keys = [];
+    GRADES.forEach(g => {
+      const n = state.classCounts[g] || 0;
+      for (let i = 1; i <= n; i++) keys.push(classKey(g, i));
+    });
+    return keys;
+  }
+
+  /* =============================================================================
+     2) 저장 · 복원 · 깊은 복사
+     ============================================================================= */
+  function deepClone(o) {
+    return JSON.parse(JSON.stringify(o));
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return createDefaultState();
+      const s = JSON.parse(raw);
+      return migrateState(s);
+    } catch (e) {
+      console.error(e);
+      return createDefaultState();
+    }
+  }
+
+  function migrateState(s) {
+    const d = createDefaultState();
+    const merged = deepClone(d);
+    Object.assign(merged, s);
+    if (!merged.schedule) merged.schedule = { byClass:{}, byRoom:{} };
+    if (!merged.schedule.byClass) merged.schedule.byClass = {};
+    if (!merged.schedule.byRoom) merged.schedule.byRoom = {};
+    if (!merged.locks) merged.locks = [];
+    if (!merged.undoStack) merged.undoStack = [];
+    if (!merged.redoStack) merged.redoStack = [];
+    if (!merged.conflicts) merged.conflicts = { errors:[], warnings:[] };
+    if (!merged.ui) merged.ui = { activeTab:'basic', highlightKey:null };
+    if (!merged.lunch.grade5Track) merged.lunch.grade5Track = d.lunch.grade5Track;
+    if (!merged.generationMeta) merged.generationMeta = { message:'', unplaced:[] };
+    if (!merged.teachers) merged.teachers = [];
+    merged.teachers = merged.teachers.map((t, i) => ({
+      allocSubject: '과학',
+      weeklyTarget: 20,
+      ...t
+    }));
+    if (!merged.rooms || merged.rooms.length === 0) merged.rooms = defaultRoomsSeed();
+    merged.rooms = merged.rooms.map(r => ({ weeklyTarget: 1, ...r }));
+    if (!merged.roomKindOptions || !merged.roomKindOptions.length) {
+      merged.roomKindOptions = CORE_ROOM_KINDS.map(k => ({ key:k, label: ROOM_KIND_LABEL[k] || k }));
+    }
+    merged.sequentialBlockSubjects = { ...deepClone(d.sequentialBlockSubjects), ...(merged.sequentialBlockSubjects || {}) };
+    merged.subjectRoomLinks = { ...deepClone(d.subjectRoomLinks), ...(merged.subjectRoomLinks || {}) };
+    merged.subjectRoomLinksByGrade = merged.subjectRoomLinksByGrade || {};
+    GRADES.forEach(g => {
+      merged.subjectRoomLinksByGrade[g] = { ...(merged.subjectRoomLinksByGrade[g] || {}) };
+    });
+    if (!merged.gradeSubjectTargets) merged.gradeSubjectTargets = deepClone(d.gradeSubjectTargets);
+    if (!merged.gradeBans) merged.gradeBans = [{ grade:1, period:'6' },{ grade:2, period:'6' }];
+    delete merged.undoStack;
+    delete merged.redoStack;
+    return merged;
+  }
+
+  let saveTimer = null;
+  function saveStateDebounced(state) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) { alert('저장 실패: ' + e.message); }
+    }, 400);
+  }
+
+  function saveStateNow(state) {
+    clearTimeout(saveTimer);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  /* =============================================================================
+     10) 렌더링 · 탭
+     ============================================================================= */
+  const TAB_DEFS = [
+    { id:'basic', label:'기본 설정' },
+    { id:'teachers', label:'전담교사 설정' },
+    { id:'rooms', label:'특별실 설정' },
+    { id:'auto', label:'자동 생성' },
+    { id:'view-teacher', label:'전담 시간표' },
+    { id:'view-class', label:'학급별 시간표' },
+    { id:'view-room', label:'특별실 시간표' },
+    { id:'conflicts', label:'충돌 검사' },
+    { id:'io', label:'저장/불러오기' }
+  ];
+
+  let state = loadState();
+
+  function setTab(id) {
+    state.ui.activeTab = id;
+    document.querySelectorAll('.tabs button').forEach(b => {
+      b.classList.toggle('active', b.dataset.tab === id);
+    });
+    document.querySelectorAll('section.panel').forEach(p => {
+      p.classList.toggle('active', p.dataset.panel === id);
+    });
+    renderActivePanel();
+    saveStateDebounced(state);
+  }
+
+  function buildChrome() {
+    const nav = document.getElementById('tab-nav');
+    nav.innerHTML = TAB_DEFS.map(t =>
+      `<button type="button" class="${state.ui.activeTab===t.id?'active':''}" data-tab="${t.id}">${t.label}</button>`
+    ).join('');
+    nav.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => setTab(b.dataset.tab));
+    });
+    const main = document.getElementById('main-panels');
+    main.innerHTML = TAB_DEFS.map(t => `<section class="panel ${state.ui.activeTab===t.id?'active':''}" data-panel="${t.id}" id="panel-${t.id}"></section>`).join('');
+    document.getElementById('btn-save-now').addEventListener('click', () => { saveStateNow(state); alert('저장했습니다.'); });
+  }
+
+  function renderActivePanel() {
+    const id = state.ui.activeTab;
+    if (id === 'basic') renderPanelBasic();
+    else if (id === 'teachers') renderPanelTeachers();
+    else if (id === 'rooms') renderPanelRooms();
+    else if (id === 'auto') renderPanelAuto();
+    else if (id === 'view-teacher') renderPanelViewTeacher();
+    else if (id === 'view-class') renderPanelViewClass();
+    else if (id === 'view-room') renderPanelViewRoom();
+    else if (id === 'conflicts') renderPanelConflicts();
+    else if (id === 'io') renderPanelIO();
+    // 참조 패널이 열려 있으면 같이 갱신
+    const refPanel = document.getElementById('ref-panel');
+    if (refPanel && refPanel.classList.contains('open')) renderRefPanel();
+  }
+
+  function renderAll() {
+    buildChrome();
+    renderActivePanel();
+  }
+
+  /* ----------- 기본 설정 패널 ----------- */
+  function renderPanelBasic() {
+    const el = document.getElementById('panel-basic');
+    el.innerHTML = `
+      <h2>기본 설정</h2>
+      <div class="flex">
+        <div class="grow">
+          <label>학교명 <input type="text" id="school-name" value="${esc(state.school.name)}" /></label>
+          <label>학년도 <input type="text" id="school-year" value="${esc(state.school.year)}" placeholder="2026" /></label>
+        </div>
+      </div>
+      <h3>학년별 학급 수 (1~6학년)</h3>
+      <table class="form-grid"><tbody>
+        ${GRADES.map(g => `<tr><td>${g}학년</td><td><input type="number" min="0" max="30" id="cc-${g}" value="${state.classCounts[g]||0}" /></td></tr>`).join('')}
+      </tbody></table>
+      <p class="hint">유치원은 본 버전에서 제외합니다.</p>
+      <h3>학년별 요일별 최대 교시</h3>
+      <div class="hint">각 학년의 월~금 최대 교시를 입력합니다 (정수).</div>
+      ${GRADES.map(g => `
+        <div style="margin:8px 0"><strong>${g}학년</strong>
+        ${DAYS.map(d => `<label>${DAY_KO[d]} <input type="number" min="1" max="8" id="pd-${g}-${d}" value="${state.periods[g][d]}" style="width:48px"/></label>`).join('')}
+        </div>
+      `).join('')}
+      <h3>점심시간 운영 방식</h3>
+      <select id="lunch-mode">
+        <option value="unified" ${state.lunch.mode==='unified'?'selected':''}>전 학년 동일 점심</option>
+        <option value="two" ${state.lunch.mode==='two'?'selected':''}>2타임 점심 (5교시 5A/5B 분리)</option>
+        <option value="three" ${state.lunch.mode==='three'?'selected':''}>3타임 점심 (5교시 5A/5B 분리)</option>
+        <option value="custom" ${state.lunch.mode==='custom'?'selected':''}>사용자 지정 (학년별 5A/5B)</option>
+      </select>
+      <div id="lunch-track-box" style="margin-top:8px">
+        <div class="hint">5교시 분리 시 각 학년이 5A(저학년 권) 또는 5B(고학년 권) 중 어디에 속하는지 선택합니다.</div>
+        ${GRADES.map(g => `
+          <label>${g}학년
+            <select id="track-${g}" ${state.lunch.mode==='unified'?'disabled':''}>
+              <option value="A" ${(state.lunch.grade5Track[String(g)]||'A')==='A'?'selected':''}>5A</option>
+              <option value="B" ${(state.lunch.grade5Track[String(g)]||'A')==='B'?'selected':''}>5B</option>
+            </select>
+          </label>
+        `).join('')}
+      </div>
+      <h3>학년 공통 금지 (전담 배정)</h3>
+      <label><input type="checkbox" id="gb-12-6" ${(state.gradeBans||[]).some(b=>b.grade===1&&b.period==='6')?'checked':''}/> 1·2학년 6교시 전담 배정 금지</label>
+      <h3>학년별 전담 목표 시수(학급당 주당)</h3>
+      <div class="hint">예: 3학년 과학 2시간, 영어 2시간. 전담 배정 누락 검사와 자동 분배 기준으로 사용됩니다.</div>
+      <div class="tt-wrap">
+        <table class="timetable">
+          <thead>
+            <tr><th>학년</th>${SUBJECT_ORDER.map(s => `<th>${s}</th>`).join('')}</tr>
+          </thead>
+          <tbody>
+            ${GRADES.map(g => `
+              <tr>
+                <th>${g}학년</th>
+                ${SUBJECT_ORDER.map(s => `<td><input type="number" min="0" max="8" id="gst-${g}-${s}" value="${((state.gradeSubjectTargets||{})[g]||{})[s] ?? 0}" style="width:50px"/></td>`).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="btn-basic-apply">설정 반영</button>
+      </div>
+    `;
+    document.getElementById('btn-basic-apply').addEventListener('click', () => {
+      state.school.name = document.getElementById('school-name').value.trim();
+      state.school.year = document.getElementById('school-year').value.trim();
+      GRADES.forEach(g => {
+        state.classCounts[g] = parseInt(document.getElementById('cc-'+g).value,10)||0;
+      });
+      GRADES.forEach(g => {
+        DAYS.forEach(d => {
+          state.periods[g][d] = Math.min(8, Math.max(1, parseInt(document.getElementById('pd-'+g+'-'+d).value,10)||5));
+        });
+      });
+      state.lunch.mode = document.getElementById('lunch-mode').value;
+      GRADES.forEach(g => {
+        state.lunch.grade5Track[String(g)] = document.getElementById('track-'+g).value;
+      });
+      state.gradeBans = (state.gradeBans || []).filter(b => !((b.grade===1||b.grade===2) && b.period==='6'));
+      if (document.getElementById('gb-12-6').checked) {
+        state.gradeBans.push({ grade:1, period:'6' }, { grade:2, period:'6' });
+      }
+      state.gradeSubjectTargets = state.gradeSubjectTargets || {};
+      GRADES.forEach(g => {
+        if (!state.gradeSubjectTargets[g]) state.gradeSubjectTargets[g] = {};
+        SUBJECT_ORDER.forEach(s => {
+          state.gradeSubjectTargets[g][s] = Math.max(0, parseInt(document.getElementById(`gst-${g}-${s}`).value, 10) || 0);
+        });
+      });
+      ensureScheduleBuckets(state);
+      pushUndo();
+      saveStateDebounced(state);
+      alert('기본 설정을 반영했습니다.');
+    });
+    document.getElementById('lunch-mode').addEventListener('change', e => {
+      const u = e.target.value === 'unified';
+      GRADES.forEach(g => { document.getElementById('track-'+g).disabled = u; });
+    });
+  }
+
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  }
+
+  /* =============================================================================
+     3) 전담교사 패널
+     ============================================================================= */
+  function renderPanelTeachers() {
+    const el = document.getElementById('panel-teachers');
+    const teachers = state.teachers;
+    const teacherAssignedTotal = t => (t.subjects || []).reduce((sum, s) => {
+      const from = Math.min(s.classFrom || 1, s.classTo || 1);
+      const to = Math.max(s.classFrom || 1, s.classTo || 1);
+      return sum + ((to - from + 1) * (s.hoursPerClass || 1));
+    }, 0);
+    el.innerHTML = `
+      <h2>전담교사 설정</h2>
+      <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:#f7f8fa">
+        <h3>간편 입력(시트형)</h3>
+        <p class="hint">교사 수, 과목, 주당 목표시수만 입력하면 학년/반 범위와 학급당 시수를 자동 추천합니다.</p>
+        <div class="btn-row">
+          <label>교사 수 <input type="number" min="1" max="26" id="quick-teacher-count" value="${teachers.length || 6}" style="width:70px"/></label>
+          <button class="btn" type="button" id="quick-build-teachers">교사 목록 자동 생성</button>
+          <button class="btn btn-primary" type="button" id="quick-auto-allocate">과목/학급 자동 분배</button>
+          <button class="btn" type="button" id="quick-coverage-check">누락 학급 검사</button>
+        </div>
+        <div class="tt-wrap">
+          <table class="timetable">
+            <thead><tr><th>교사</th><th>주력 과목</th><th>주당 목표시수</th><th>현재 배정합계</th><th>오차</th><th>하루 최대</th></tr></thead>
+            <tbody>
+              ${teachers.map((t, i) => `
+                <tr>
+                  <td><input type="text" class="qa-name" data-ti="${i}" value="${esc(t.name)}" style="width:90px"/></td>
+                  <td>
+                    <select class="qa-subj" data-ti="${i}">
+                      ${SUBJECT_ORDER.map(s => `<option value="${s}" ${(t.allocSubject || '과학')===s?'selected':''}>${s}</option>`).join('')}
+                    </select>
+                  </td>
+                  <td><input type="number" min="1" max="60" class="qa-weekly" data-ti="${i}" value="${t.weeklyTarget || 20}" style="width:80px"/></td>
+                  <td><strong>${teacherAssignedTotal(t)}</strong></td>
+                  <td>${Math.abs(teacherAssignedTotal(t) - (t.weeklyTarget || 20)) <= 2 ? '<span style="color:#00b578">±2 이내</span>' : '<span style="color:#f53f3f">조정 필요</span>'}</td>
+                  <td><input type="number" min="1" max="8" class="qa-max" data-ti="${i}" value="${t.maxDaily || 5}" style="width:60px"/></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div id="coverage-report" style="margin-top:8px"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="add-teacher">교사 추가</button>
+      </div>
+      <div id="teacher-list"></div>
+    `;
+    el.querySelectorAll('.qa-name').forEach(inp => inp.addEventListener('change', e => {
+      const ti = parseInt(e.target.dataset.ti, 10);
+      if (!state.teachers[ti]) return;
+      state.teachers[ti].name = e.target.value.trim() || teacherNameByIndex(ti);
+      saveStateDebounced(state);
+    }));
+    el.querySelectorAll('.qa-subj').forEach(inp => inp.addEventListener('change', e => {
+      const ti = parseInt(e.target.dataset.ti, 10);
+      if (!state.teachers[ti]) return;
+      state.teachers[ti].allocSubject = e.target.value;
+      saveStateDebounced(state);
+    }));
+    el.querySelectorAll('.qa-weekly').forEach(inp => inp.addEventListener('change', e => {
+      const ti = parseInt(e.target.dataset.ti, 10);
+      if (!state.teachers[ti]) return;
+      state.teachers[ti].weeklyTarget = Math.max(1, parseInt(e.target.value, 10) || 20);
+      saveStateDebounced(state);
+    }));
+    el.querySelectorAll('.qa-max').forEach(inp => inp.addEventListener('change', e => {
+      const ti = parseInt(e.target.dataset.ti, 10);
+      if (!state.teachers[ti]) return;
+      state.teachers[ti].maxDaily = Math.max(1, Math.min(8, parseInt(e.target.value, 10) || 5));
+      saveStateDebounced(state);
+    }));
+    document.getElementById('quick-build-teachers').addEventListener('click', () => {
+      const n = Math.max(1, Math.min(26, parseInt(document.getElementById('quick-teacher-count').value, 10) || 6));
+      pushUndo();
+      const old = deepClone(state.teachers);
+      state.teachers = [];
+      for (let i = 0; i < n; i++) {
+        state.teachers.push({
+          id: uid('t'),
+          name: (old[i] && old[i].name) || teacherNameByIndex(i),
+          maxDaily: (old[i] && old[i].maxDaily) || 5,
+          minimizeGaps: true,
+          allocSubject: (old[i] && old[i].allocSubject) || '과학',
+          weeklyTarget: (old[i] && old[i].weeklyTarget) || 20,
+          subjects: (old[i] && old[i].subjects) || [],
+          fixed: (old[i] && old[i].fixed) || [],
+          banned: (old[i] && old[i].banned) || []
+        });
+      }
+      saveStateDebounced(state);
+      renderPanelTeachers();
+    });
+    document.getElementById('quick-auto-allocate').addEventListener('click', () => {
+      pushUndo();
+      const result = autoAllocateTeacherLoadsFromQuickInputs();
+      saveStateDebounced(state);
+      renderPanelTeachers();
+      if (!result || result.ok) {
+        alert('자동 분배를 완료했습니다. 기본 설정의 목표 전담시수 기준으로 모든 학급/과목을 배정했습니다.');
+      } else {
+        const hard = (result.unassignedUnits || []).length;
+        alert(`자동 분배를 완료했지만 누락/초과가 남아 있습니다.${hard ? `\n(강제 제약으로 미배정 ${hard}건: 2시간 이상 과목 중복 금지)` : ''}\n전담교사 설정의 누락 학급 검사를 확인하세요.`);
+      }
+    });
+    document.getElementById('quick-coverage-check').addEventListener('click', () => {
+      const report = buildCoverageReport();
+      const holder = document.getElementById('coverage-report');
+      holder.innerHTML = renderCoverageReportHtml(report);
+    });
+    document.getElementById('add-teacher').addEventListener('click', () => {
+      state.teachers.push({
+        id: uid('t'),
+        name: '새교사',
+        maxDaily: 5,
+        minimizeGaps: true,
+        allocSubject: '과학',
+        weeklyTarget: 20,
+        subjects: [],
+        fixed: [],
+        banned: []
+      });
+      pushUndo();
+      saveStateDebounced(state);
+      renderPanelTeachers();
+    });
+    const list = document.getElementById('teacher-list');
+    list.innerHTML = teachers.map((t, idx) => teacherEditorHtml(t, idx)).join('');
+    teachers.forEach((t, idx) => bindTeacherEditor(t, idx));
+  }
+
+  function teacherEditorHtml(t, idx) {
+    const subs = (t.subjects||[]).map((s, si) => subjectRowHtml(t, idx, s, si)).join('');
+    const fixed = (t.fixed||[]).map((f, fi) => fixedRowHtml(t, idx, f, fi)).join('');
+    const banned = (t.banned||[]).map((b, bi) => bannedRowHtml(t, idx, b, bi)).join('');
+    return `
+      <div class="card-block" style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:#fafafa">
+        <div class="flex">
+          <label>이름 <input type="text" data-t="${idx}" class="tn" value="${esc(t.name)}" /></label>
+          <label>하루 최대 <input type="number" min="1" max="8" data-t="${idx}" class="tm" value="${t.maxDaily}" style="width:50px"/></label>
+          <label>목표 ${t.weeklyTarget || 20} / 현재합계 <strong>${(t.subjects||[]).reduce((sum, s) => sum + ((Math.max(s.classFrom||1, s.classTo||1) - Math.min(s.classFrom||1, s.classTo||1) + 1) * (s.hoursPerClass||1)), 0)}</strong></label>
+          <label><input type="checkbox" data-t="${idx}" class="tg" ${t.minimizeGaps?'checked':''}/> 중간공강 최소화</label>
+          <button class="btn btn-danger btn-del-t" data-t="${idx}" type="button">교사 삭제</button>
+        </div>
+        <h3>담당 과목</h3>
+        <table class="form-grid"><tbody id="sub-tbody-${idx}">${subs}</tbody></table>
+        <button class="btn" type="button" data-add-sub="${idx}">과목 추가</button>
+        <h3>고정 배정</h3>
+        <table class="form-grid"><tbody id="fix-tbody-${idx}">${fixed}</tbody></table>
+        <button class="btn" type="button" data-add-fix="${idx}">고정 추가</button>
+        <h3>금지 시간 (교사)</h3>
+        <table class="form-grid"><tbody id="ban-tbody-${idx}">${banned}</tbody></table>
+        <button class="btn" type="button" data-add-ban="${idx}">금지 추가</button>
+      </div>
+    `;
+  }
+
+  function teacherNameByIndex(i) {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    if (i < letters.length) return letters[i] + '교사';
+    return 'T' + (i + 1);
+  }
+
+  function recommendedHoursPerClass(subject, grade) {
+    const tgt = (((state.gradeSubjectTargets || {})[grade] || {})[subject]);
+    if (typeof tgt === 'number') return tgt;
+    if (subject === '과학') return grade >= 5 ? 3 : (grade >= 3 ? 2 : 0);
+    if (subject === '영어') return grade >= 5 ? 3 : (grade >= 3 ? 2 : 0);
+    if (subject === '놀이') return grade <= 2 ? 1 : 0;
+    if (subject === '체육') return grade >= 3 ? 1 : 0;
+    if (subject === '음악') return grade >= 3 ? 1 : 0;
+    if (subject === '정보') return [2,3,5].includes(grade) ? 1 : 0;
+    return 1;
+  }
+
+  function buildDemandUnitsBySubject(subject) {
+    const units = [];
+    GRADES.forEach(g => {
+      const n = state.classCounts[g] || 0;
+      const h = recommendedHoursPerClass(subject, g);
+      if (!h) return;
+      for (let c = 1; c <= n; c++) {
+        units.push({ subject, grade: g, classNum: c, hoursPerClass: h });
+      }
+    });
+    return units;
+  }
+
+  function buildAllDemandUnitsFromTargets() {
+    const units = [];
+    GRADES.forEach(g => {
+      const n = state.classCounts[g] || 0;
+      SUBJECT_ORDER.forEach(subject => {
+        const h = (((state.gradeSubjectTargets || {})[g] || {})[subject]) || 0;
+        if (!h) return;
+        for (let c = 1; c <= n; c++) {
+          units.push({ subject, grade: g, classNum: c, hoursPerClass: h });
+        }
+      });
+    });
+    return units;
+  }
+
+  function compressUnitsToSubjectRows(units) {
+    const rows = [];
+    const groups = {};
+    units.forEach(u => {
+      const key = [u.subject, u.grade, u.hoursPerClass].join('|');
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(u.classNum);
+    });
+    Object.keys(groups).forEach(key => {
+      const [subject, gradeStr, hStr] = key.split('|');
+      const grade = parseInt(gradeStr, 10);
+      const h = parseInt(hStr, 10);
+      const nums = groups[key].slice().sort((a, b) => a - b);
+      let start = null;
+      let prev = null;
+      nums.forEach(n => {
+        if (start === null) { start = n; prev = n; return; }
+        if (n === prev + 1) { prev = n; return; }
+        rows.push({ subject, grade, classFrom: start, classTo: prev, hoursPerClass: h });
+        start = n;
+        prev = n;
+      });
+      if (start !== null) rows.push({ subject, grade, classFrom: start, classTo: prev, hoursPerClass: h });
+    });
+    rows.sort((a, b) => a.grade - b.grade || a.classFrom - b.classFrom || a.subject.localeCompare(b.subject));
+    return rows;
+  }
+
+  function autoAllocateTeacherLoadsFromQuickInputs() {
+    const specs = state.teachers.map(t => ({
+      teacher: t,
+      subject: t.allocSubject || '과학',
+      target: Math.max(1, parseInt(t.weeklyTarget, 10) || 20),
+      assignedHours: 0,
+      units: []
+    }));
+    state.teachers.forEach(t => { t.subjects = []; });
+    if (!specs.length) return { ok:false, message:'전담교사를 먼저 추가하세요.' };
+
+    const demand = buildAllDemandUnitsFromTargets();
+    const grouped = {};
+    demand.forEach(u => {
+      const key = u.subject + '|' + u.grade;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(u);
+    });
+    const unassignedUnits = [];
+
+    const groupKeys = Object.keys(grouped).sort((a, b) => {
+      const [sa, ga] = a.split('|');
+      const [sb, gb] = b.split('|');
+      const lenDiff = grouped[b].length - grouped[a].length;
+      if (lenDiff) return lenDiff;
+      return SUBJECT_ORDER.indexOf(sa) - SUBJECT_ORDER.indexOf(sb) || parseInt(ga, 10) - parseInt(gb, 10);
+    });
+
+    function hasSameGradeSubject(spec, unit) {
+      return spec.units.some(u => u.subject === unit.subject && u.grade === unit.grade);
+    }
+
+    function specDistinctGradeSubjectCount(spec) {
+      const set = new Set(spec.units.map(u => u.subject + '|' + u.grade));
+      return set.size;
+    }
+
+    function getHighLoadSubject(spec) {
+      const high = spec.units.find(u => (u.hoursPerClass || 0) >= 2);
+      return high ? high.subject : null;
+    }
+
+    /**
+     * 강제 제약:
+     * - 2시간 이상 과목은 교사당 1종류만 허용
+     * - 1시간 과목은 기존 2시간 과목과 병행 가능
+     * => 과학(2+) + 영어(2+) 동시 배정 방지
+     */
+    function teacherCanTakeUnit(spec, unit) {
+      const unitIsHigh = (unit.hoursPerClass || 0) >= 2;
+      if (!unitIsHigh) return true;
+      const highSubj = getHighLoadSubject(spec);
+      if (!highSubj) return true;
+      return highSubj === unit.subject;
+    }
+
+    function scoreSpecForUnit(spec, unit, allowOver) {
+      if (!teacherCanTakeUnit(spec, unit)) return Number.POSITIVE_INFINITY;
+      const next = spec.assignedHours + unit.hoursPerClass;
+      const overHard = Math.max(0, next - (spec.target + 2));
+      const overSoft = Math.max(0, next - spec.target);
+      const underAfter = Math.abs(next - spec.target);
+      const subjectMismatch = spec.subject === unit.subject ? 0 : 5000;
+      const sameGradeSubjectBonus = hasSameGradeSubject(spec, unit) ? -120 : 0;
+      const newBucketPenalty = hasSameGradeSubject(spec, unit) ? 0 : specDistinctGradeSubjectCount(spec) * 180;
+      const overPenalty = allowOver ? overHard * 350 + overSoft * 40 : overHard * 10000 + overSoft * 80;
+      return subjectMismatch + newBucketPenalty + overPenalty + underAfter + sameGradeSubjectBonus;
+    }
+
+    function pickSpec(unit, allowOver) {
+      const candidates = specs.filter(s => teacherCanTakeUnit(s, unit));
+      if (!candidates.length) return null;
+      return candidates.slice().sort((a, b) => scoreSpecForUnit(a, unit, allowOver) - scoreSpecForUnit(b, unit, allowOver))[0];
+    }
+
+    groupKeys.forEach(key => {
+      const units = grouped[key].slice().sort((a, b) => a.classNum - b.classNum);
+      while (units.length) {
+        const first = units[0];
+        let spec = pickSpec(first, false);
+        if (!spec) spec = pickSpec(first, true);
+        if (!spec) {
+          unassignedUnits.push(units.shift());
+          continue;
+        }
+        let moved = 0;
+
+        // 한 학년/한 과목이 한 교사에게 연속 반 범위로 묶이도록 가능한 만큼 채운다.
+        while (units.length) {
+          const unit = units[0];
+          const next = spec.assignedHours + unit.hoursPerClass;
+          const underMinimum = spec.assignedHours < Math.max(0, spec.target - 2);
+          const canStayClean = next <= spec.target + 2;
+          const noBetterUnderTarget = specs.every(s => s === spec || (s.subject !== unit.subject) || s.assignedHours >= s.target - 2);
+          if (!canStayClean && !underMinimum && !noBetterUnderTarget) break;
+          if (!canStayClean && moved > 0) break;
+          spec.units.push(units.shift());
+          spec.assignedHours += unit.hoursPerClass;
+          moved++;
+          if (spec.assignedHours >= spec.target - 2 && specs.some(s => s.subject === unit.subject && s.assignedHours < s.target - 2)) break;
+        }
+
+        if (moved === 0) {
+          spec = pickSpec(first, true);
+          if (!spec) {
+            unassignedUnits.push(units.shift());
+            continue;
+          }
+          spec.units.push(units.shift());
+          spec.assignedHours += first.hoursPerClass;
+        }
+      }
+    });
+
+    specs.forEach(s => {
+      s.teacher.subjects = compressUnitsToSubjectRows(s.units);
+      s.teacher.allocSubject = s.subject;
+      s.teacher.weeklyTarget = s.target;
+    });
+
+    const coverage = buildCoverageReport();
+    const offTarget = specs
+      .map(s => ({ name: s.teacher.name, target: s.target, actual: s.assignedHours, diff: Math.abs(s.assignedHours - s.target) }))
+      .filter(x => x.diff > 2);
+    return { ok: !coverage.missing.length && unassignedUnits.length === 0, coverage, offTarget, unassignedUnits, specs };
+  }
+
+  function buildCoverageReport() {
+    const expected = {};
+    GRADES.forEach(g => {
+      const classCount = state.classCounts[g] || 0;
+      for (let c = 1; c <= classCount; c++) {
+        const ck = classKey(g, c);
+        expected[ck] = {};
+        SUBJECT_ORDER.forEach(subj => {
+          expected[ck][subj] = (((state.gradeSubjectTargets || {})[g] || {})[subj]) || 0;
+        });
+      }
+    });
+    const actual = {};
+    Object.keys(expected).forEach(ck => {
+      actual[ck] = {};
+      SUBJECT_ORDER.forEach(subj => actual[ck][subj] = 0);
+    });
+    state.teachers.forEach(t => {
+      (t.subjects || []).forEach(s => {
+        const from = Math.min(s.classFrom || 1, s.classTo || 1);
+        const to = Math.max(s.classFrom || 1, s.classTo || 1);
+        for (let c = from; c <= to; c++) {
+          const ck = classKey(s.grade, c);
+          if (!actual[ck]) continue;
+          if (typeof actual[ck][s.subject] !== 'number') actual[ck][s.subject] = 0;
+          actual[ck][s.subject] += (s.hoursPerClass || 0);
+        }
+      });
+    });
+    const missing = [];
+    const over = [];
+    Object.keys(expected).forEach(ck => {
+      SUBJECT_ORDER.forEach(subj => {
+        const exp = expected[ck][subj] || 0;
+        const act = (actual[ck] && actual[ck][subj]) || 0;
+        if (exp > 0 && act < exp) missing.push({ classKey: ck, subject: subj, expected: exp, actual: act, gap: exp - act });
+        if (exp >= 0 && act > exp) over.push({ classKey: ck, subject: subj, expected: exp, actual: act, extra: act - exp });
+      });
+    });
+    return { missing, over };
+  }
+
+  function renderCoverageReportHtml(report) {
+    const m = report.missing || [];
+    const o = report.over || [];
+    if (!m.length && !o.length) {
+      return `<div class="hint" style="color:#00b578"><strong>검사 결과:</strong> 모든 학급이 기본 설정 목표 시수에 맞게 배정되었습니다.</div>`;
+    }
+    return `
+      <div class="hint"><strong>검사 결과</strong> - 누락 ${m.length}건 / 초과 ${o.length}건</div>
+      ${m.length ? `
+        <div style="margin-top:6px"><span class="tag tag-err">누락</span></div>
+        <ul class="msg-list">${m.slice(0, 200).map(x => `<li>${x.classKey} ${x.subject}: 목표 ${x.expected}, 현재 ${x.actual} (부족 ${x.gap})</li>`).join('')}</ul>
+      ` : ''}
+      ${o.length ? `
+        <div style="margin-top:6px"><span class="tag tag-warn">초과</span></div>
+        <ul class="msg-list">${o.slice(0, 200).map(x => `<li>${x.classKey} ${x.subject}: 목표 ${x.expected}, 현재 ${x.actual} (초과 ${x.extra})</li>`).join('')}</ul>
+      ` : ''}
+    `;
+  }
+
+  function subjectRowHtml(t, ti, s, si) {
+    const g = s.grade;
+    const clsMin = s.classFrom || (s.classes && s.classes[0]) || 1;
+    const clsMax = s.classTo || (s.classes && s.classes[s.classes.length-1]) || state.classCounts[g] || 1;
+    const h = s.hoursPerClass || 1;
+    const subOpts = SUBJECT_ORDER.concat(['기타']).filter((v,i,a)=>a.indexOf(v)===i)
+      .map(x => `<option value="${x}" ${s.subject===x?'selected':''}>${x}</option>`).join('');
+    const total = (() => {
+      let cnt = 0;
+      const from = Math.min(clsMin, clsMax), to = Math.max(clsMin, clsMax);
+      for (let c = from; c <= to; c++) cnt++;
+      return cnt * h;
+    })();
+    return `<tr>
+      <td><select class="sub-subj" data-ti="${ti}" data-si="${si}">${subOpts}</select></td>
+      <td><input type="number" class="sub-gr" data-ti="${ti}" data-si="${si}" value="${g}" min="1" max="6" style="width:44px"/>학년</td>
+      <td>반 <input type="number" class="sub-f" data-ti="${ti}" data-si="${si}" value="${clsMin}" min="1" style="width:44px"/>~<input type="number" class="sub-t" data-ti="${ti}" data-si="${si}" value="${clsMax}" min="1" style="width:44px"/></td>
+      <td>학급당 <input type="number" class="sub-h" data-ti="${ti}" data-si="${si}" value="${h}" min="1" style="width:44px"/>시간</td>
+      <td>합계 <strong class="sub-tot">${total}</strong></td>
+      <td><button type="button" class="btn btn-del-sub" data-ti="${ti}" data-si="${si}">삭제</button></td>
+    </tr>`;
+  }
+
+  function fixedRowHtml(t, ti, f, fi) {
+    const slotOpts = ['1','2','3','4','5','5A','5B','6'].map(s =>
+      `<option value="${s}" ${f.periods && f.periods[0]===s?'selected':''}>${slotLabel(s)}</option>`).join('');
+    const slotOpts2 = ['1','2','3','4','5','5A','5B','6'].map(s =>
+      `<option value="${s}" ${f.periods && f.periods[1]===s?'selected':''}>${slotLabel(s)}</option>`).join('');
+    const clsOpts = listAllClassKeys(state).map(ck =>
+      `<option value="${ck}" ${f.classKey===ck?'selected':''}>${ck}</option>`).join('');
+    return `<tr>
+      <td><select class="fx-class" data-ti="${ti}" data-fi="${fi}">${clsOpts}</select></td>
+      <td><select class="fx-subj" data-ti="${ti}" data-fi="${fi}">${SUBJECT_ORDER.map(x=>`<option value="${x}" ${f.subject===x?'selected':''}>${x}</option>`).join('')}</select></td>
+      <td>${DAYS.map(d=>`<label><input type="checkbox" class="fx-day" data-ti="${ti}" data-fi="${fi}" value="${d}" ${(f.days&&f.days.includes(d))?'checked':''}/>${DAY_KO[d]}</label>`).join('')}</td>
+      <td><select class="fx-p1" data-ti="${ti}" data-fi="${fi}">${slotOpts}</select></td>
+      <td><select class="fx-p2" data-ti="${ti}" data-fi="${fi}">${slotOpts2}</select></td>
+      <td><button type="button" class="btn btn-del-fix" data-ti="${ti}" data-fi="${fi}">삭제</button></td>
+    </tr>`;
+  }
+
+  function bannedRowHtml(t, ti, b, bi) {
+    const slotOpts = ['1','2','3','4','5','5A','5B','6'].map(s =>
+      `<option value="${s}" ${b.period===s?'selected':''}>${slotLabel(s)}</option>`).join('');
+    return `<tr>
+      <td>${DAYS.map(d=>`<label><input type="radio" name="ban-${ti}-${bi}" class="bn-day" data-ti="${ti}" data-bi="${bi}" value="${d}" ${b.day===d?'checked':''}/>${DAY_KO[d]}</label>`).join('')}</td>
+      <td><select class="bn-sl" data-ti="${ti}" data-bi="${bi}">${slotOpts}</select></td>
+      <td><button type="button" class="btn btn-del-ban" data-ti="${ti}" data-bi="${bi}">삭제</button></td>
+    </tr>`;
+  }
+
+  function bindTeacherEditor(t, idx) {
+    const block = document.querySelectorAll('.card-block')[idx];
+    if (!block) return;
+    block.querySelector('.tn').addEventListener('change', e => { t.name = e.target.value; syncTeachersFromDom(idx); });
+    block.querySelector('.tm').addEventListener('change', e => { t.maxDaily = parseInt(e.target.value,10)||5; syncTeachersFromDom(idx); });
+    block.querySelector('.tg').addEventListener('change', e => { t.minimizeGaps = e.target.checked; syncTeachersFromDom(idx); });
+    block.querySelector('.btn-del-t').addEventListener('click', () => {
+      if (!confirm('이 교사를 삭제할까요?')) return;
+      state.teachers.splice(idx,1);
+      pushUndo();
+      saveStateDebounced(state);
+      renderPanelTeachers();
+    });
+    block.querySelector('[data-add-sub]')?.addEventListener('click', e => {
+      const ti = parseInt(e.target.getAttribute('data-add-sub'),10);
+      state.teachers[ti].subjects.push({ subject:'과학', grade:3, classFrom:1, classTo:1, hoursPerClass:2 });
+      pushUndo();
+      saveStateDebounced(state);
+      renderPanelTeachers();
+    });
+    block.querySelectorAll('.btn-del-sub').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const ti = parseInt(e.target.dataset.ti,10), si = parseInt(e.target.dataset.si,10);
+        state.teachers[ti].subjects.splice(si,1);
+        pushUndo();
+        saveStateDebounced(state);
+        renderPanelTeachers();
+      });
+    });
+    block.querySelector('[data-add-fix]')?.addEventListener('click', e => {
+      const ti = parseInt(e.target.getAttribute('data-add-fix'),10);
+      state.teachers[ti].fixed.push({ classKey:'3-1', subject:'과학', days:['tue'], periods:['1','2'] });
+      pushUndo();
+      saveStateDebounced(state);
+      renderPanelTeachers();
+    });
+    block.querySelectorAll('.btn-del-fix').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const ti = parseInt(e.target.dataset.ti,10), fi = parseInt(e.target.dataset.fi,10);
+        state.teachers[ti].fixed.splice(fi,1);
+        pushUndo();
+        saveStateDebounced(state);
+        renderPanelTeachers();
+      });
+    });
+    block.querySelector('[data-add-ban]')?.addEventListener('click', e => {
+      const ti = parseInt(e.target.getAttribute('data-add-ban'),10);
+      state.teachers[ti].banned.push({ day:'fri', period:'5' });
+      pushUndo();
+      saveStateDebounced(state);
+      renderPanelTeachers();
+    });
+    block.querySelectorAll('.btn-del-ban').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const ti = parseInt(e.target.dataset.ti,10), bi = parseInt(e.target.dataset.bi,10);
+        state.teachers[ti].banned.splice(bi,1);
+        pushUndo();
+        saveStateDebounced(state);
+        renderPanelTeachers();
+      });
+    });
+    block.querySelectorAll('.sub-subj,.sub-gr,.sub-f,.sub-t,.sub-h').forEach(inp => {
+      inp.addEventListener('change', () => syncTeachersFromDom(idx));
+    });
+    block.querySelectorAll('.fx-class,.fx-subj,.fx-day,.fx-p1,.fx-p2').forEach(inp => {
+      inp.addEventListener('change', () => syncTeachersFromDom(idx));
+    });
+    block.querySelectorAll('.bn-day,.bn-sl').forEach(inp => {
+      inp.addEventListener('change', () => syncTeachersFromDom(idx));
+    });
+  }
+
+  function syncTeachersFromDom(ti) {
+    pushUndo();
+    const block = document.querySelectorAll('.card-block')[ti];
+    const t = state.teachers[ti];
+    t.name = block.querySelector('.tn').value;
+    t.maxDaily = parseInt(block.querySelector('.tm').value,10)||5;
+    t.minimizeGaps = block.querySelector('.tg').checked;
+    if (!t.allocSubject) t.allocSubject = '과학';
+    if (!t.weeklyTarget) t.weeklyTarget = 20;
+    t.subjects = [];
+    block.querySelectorAll('#sub-tbody-' + ti + ' tr').forEach(tr => {
+      const subj = tr.querySelector('.sub-subj'); if (!subj) return;
+      const gr = parseInt(tr.querySelector('.sub-gr').value,10)||1;
+      const cf = parseInt(tr.querySelector('.sub-f').value,10)||1;
+      const ct = parseInt(tr.querySelector('.sub-t').value,10)||1;
+      const h = parseInt(tr.querySelector('.sub-h').value,10)||1;
+      t.subjects.push({ subject:subj.value, grade:gr, classFrom:cf, classTo:ct, hoursPerClass:h });
+      const tot = (Math.abs(ct-cf)+1) * h;
+      const totEl = tr.querySelector('.sub-tot');
+      if (totEl) totEl.textContent = tot;
+    });
+    t.fixed = [];
+    block.querySelectorAll('#fix-tbody-' + ti + ' tr').forEach(tr => {
+      const sel = tr.querySelector('.fx-class'); if (!sel) return;
+      const days = []; tr.querySelectorAll('.fx-day:checked').forEach(c => days.push(c.value));
+      t.fixed.push({
+        classKey: sel.value,
+        subject: tr.querySelector('.fx-subj').value,
+        days,
+        periods: [tr.querySelector('.fx-p1').value, tr.querySelector('.fx-p2').value]
+      });
+    });
+    t.banned = [];
+    block.querySelectorAll('#ban-tbody-' + ti + ' tr').forEach(tr => {
+      const rd = tr.querySelector('.bn-day:checked'); const sl = tr.querySelector('.bn-sl');
+      if (!rd || !sl) return;
+      t.banned.push({ day: rd.value, period: sl.value });
+    });
+    saveStateDebounced(state);
+  }
+
+  /* =============================================================================
+     4) 특별실 패널
+     ============================================================================= */
+  function renderPanelRooms() {
+    const el = document.getElementById('panel-rooms');
+    const kindOptions = state.roomKindOptions || CORE_ROOM_KINDS.map(k => ({ key:k, label: ROOM_KIND_LABEL[k] || k }));
+    el.innerHTML = `
+      <h2>특별실 설정</h2>
+      <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;background:#f7f8fa">
+        <h3>특별실 종류 관리</h3>
+        <div class="btn-row">
+          <label>종류 코드 <input type="text" id="kind-key" placeholder="예: maker" style="width:120px"/></label>
+          <label>표시명 <input type="text" id="kind-label" placeholder="예: 메이커실" style="width:120px"/></label>
+          <button class="btn" type="button" id="add-kind-btn">종류 추가</button>
+        </div>
+        <table style="width:100%;max-width:720px;border-collapse:collapse;font-size:13px;margin-top:8px;border:1px solid var(--border)">
+          <thead><tr style="background:#eef2ff"><th style="padding:6px;text-align:left">종류 코드</th><th style="padding:6px;text-align:left">표시명</th><th style="padding:6px">작업</th></tr></thead>
+          <tbody id="kind-tbody">
+            ${kindOptions.map(k => `
+              <tr data-kind="${esc(k.key)}">
+                <td style="padding:6px"><code>${esc(k.key)}</code></td>
+                <td style="padding:6px"><input type="text" class="kind-label-inp" value="${esc(k.label)}" style="width:min(100%,220px)"/></td>
+                <td style="padding:6px;white-space:nowrap">
+                  <button type="button" class="btn kind-save-btn">이름 저장</button>
+                  <button type="button" class="btn btn-danger kind-del-btn">삭제</button>
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <p class="hint">기본 종류도 표시명을 바꿀 수 있습니다. 해당 종류를 쓰는 특별실이 있으면 종류 삭제는 불가입니다.</p>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" type="button" id="add-room">특별실 추가</button></div>
+      <div id="room-list"></div>
+    `;
+    document.getElementById('add-kind-btn').addEventListener('click', () => {
+      const keyRaw = (document.getElementById('kind-key').value || '').trim().toLowerCase();
+      const label = (document.getElementById('kind-label').value || '').trim();
+      const key = keyRaw.replace(/[^a-z0-9_-]/g, '');
+      if (!key || !label) return alert('종류 코드와 표시명을 입력하세요.');
+      if ((state.roomKindOptions || []).some(x => x.key === key)) return alert('이미 있는 종류 코드입니다.');
+      pushUndo();
+      state.roomKindOptions = state.roomKindOptions || CORE_ROOM_KINDS.map(k => ({ key:k, label: ROOM_KIND_LABEL[k] || k }));
+      state.roomKindOptions.push({ key, label });
+      saveStateDebounced(state);
+      renderPanelRooms();
+    });
+    el.querySelector('#kind-tbody').addEventListener('click', e => {
+      const tr = e.target.closest('tr[data-kind]');
+      if (!tr) return;
+      const key = tr.getAttribute('data-kind');
+      const row = (state.roomKindOptions || []).find(x => x.key === key);
+      if (!row) return;
+      if (e.target.classList.contains('kind-save-btn')) {
+        const lab = (tr.querySelector('.kind-label-inp') || {}).value || '';
+        if (!String(lab).trim()) return alert('표시명을 입력하세요.');
+        pushUndo();
+        row.label = String(lab).trim();
+        saveStateDebounced(state);
+        renderPanelRooms();
+        return;
+      }
+      if (e.target.classList.contains('kind-del-btn')) {
+        if (state.rooms.some(r => r.kind === key)) return alert('이 종류를 사용하는 특별실이 있어 삭제할 수 없습니다.');
+        if (!confirm('종류「' + key + '」를 삭제할까요?')) return;
+        pushUndo();
+        state.roomKindOptions = (state.roomKindOptions || []).filter(k => k.key !== key);
+        saveStateDebounced(state);
+        renderPanelRooms();
+      }
+    });
+    document.getElementById('add-room').addEventListener('click', () => {
+      state.rooms.push({
+        id: uid('r'),
+        name: '새 특별실',
+        kind: 'other',
+        allowedGrades: [1,2,3,4,5,6],
+        capacity: 1,
+        weeklyTarget: 1,
+        byClass: true,
+        byGrade: false,
+        bannedSlots: [],
+        afterSchoolOk: false,
+        priority: 99
+      });
+      normalizeRoomPriorities(state);
+      pushUndo();
+      saveStateDebounced(state);
+      renderPanelRooms();
+    });
+    const list = document.getElementById('room-list');
+    list.innerHTML = state.rooms.map((r, i) => `
+      <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;background:#fafafa">
+        <div class="flex">
+          <label>이름 <input type="text" class="rn" data-ri="${i}" value="${esc(r.name)}"/></label>
+          <label>종류
+            <select class="rk" data-ri="${i}">
+              ${kindOptions.map(k =>
+                `<option value="${k.key}" ${r.kind===k.key?'selected':''}>${esc(k.label)}</option>`).join('')}
+            </select>
+          </label>
+          <label>동시 수용 학급 <input type="number" class="rc" data-ri="${i}" min="1" max="10" value="${r.capacity}" style="width:50px"/></label>
+          <label>주당 배정 횟수(단위당) <input type="number" class="rw" data-ri="${i}" min="0" max="10" value="${r.weeklyTarget || 1}" style="width:60px"/></label>
+          <label>우선순위 <input type="number" class="rp" data-ri="${i}" value="${r.priority}" style="width:60px"/></label>
+          <button class="btn btn-danger btn-rm-del" data-ri="${i}" type="button">삭제</button>
+        </div>
+        <div>사용 가능 학년:
+          ${GRADES.map(g => `<label><input type="checkbox" class="rg" data-ri="${i}" value="${g}" ${r.allowedGrades.includes(g)?'checked':''}/>${g}</label>`).join('')}
+        </div>
+        <label><input type="checkbox" class="rbc" data-ri="${i}" ${r.byClass?'checked':''}/> 학급 단위 배정</label>
+        <label><input type="checkbox" class="rbg" data-ri="${i}" ${r.byGrade?'checked':''}/> 학년 단위 배정</label>
+        <label><input type="checkbox" class="ras" data-ri="${i}" ${r.afterSchoolOk?'checked':''}/> 방과후 사용 가능</label>
+        <div class="hint">금지 요일·교시는 JSON 편집 또는 이후 확장에서 추가 가능합니다. (현재 bannedSlots 배열)</div>
+      </div>
+    `).join('');
+    state.rooms.forEach((r,i) => {
+      const box = list.children[i];
+      box.querySelector('.rn').addEventListener('change', e => { r.name = e.target.value; saveSR(i); });
+      box.querySelector('.rk').addEventListener('change', e => { r.kind = e.target.value; saveSR(i); });
+      box.querySelector('.rc').addEventListener('change', e => { r.capacity = parseInt(e.target.value,10)||1; saveSR(i); });
+      box.querySelector('.rw').addEventListener('change', e => { r.weeklyTarget = Math.max(0, parseInt(e.target.value,10)||1); saveSR(i); });
+      box.querySelector('.rp').addEventListener('change', e => {
+        r.priority = parseInt(e.target.value,10)||1;
+        normalizeRoomPriorities(state, r.id, r.priority);
+        renderPanelRooms();
+        saveSR(i);
+      });
+      box.querySelectorAll('.rg').forEach(cb => {
+        cb.addEventListener('change', () => {
+          r.allowedGrades = GRADES.filter(g => box.querySelector('.rg[value="'+g+'"]').checked);
+          saveSR(i);
+        });
+      });
+      box.querySelector('.rbc').addEventListener('change', e => { r.byClass = e.target.checked; saveSR(i); });
+      box.querySelector('.rbg').addEventListener('change', e => { r.byGrade = e.target.checked; saveSR(i); });
+      box.querySelector('.ras').addEventListener('change', e => { r.afterSchoolOk = e.target.checked; saveSR(i); });
+      box.querySelector('.btn-rm-del').addEventListener('click', () => {
+        if (!confirm('삭제할까요?')) return;
+        state.rooms.splice(i,1);
+        pushUndo();
+        saveStateDebounced(state);
+        renderPanelRooms();
+      });
+    });
+    function saveSR(i) {
+      normalizeRoomPriorities(state);
+      saveStateDebounced(state);
+    }
+  }
+
+  /* =============================================================================
+     충돌 키 · 셀 접근
+     ============================================================================= */
+  function cellKey(classKey, day, slot) {
+    return classKey + '|' + day + '|' + slot;
+  }
+
+  function getCell(state, classKey, day, slot) {
+    ensureScheduleBuckets(state);
+    return state.schedule.byClass[classKey][day][slot] || null;
+  }
+
+  function setCell(state, classKey, day, slot, cell) {
+    ensureScheduleBuckets(state);
+    if (cell) state.schedule.byClass[classKey][day][slot] = cell;
+    else delete state.schedule.byClass[classKey][day][slot];
+  }
+
+  function isLocked(state, classKey, day, slot) {
+    return state.locks.includes(cellKey(classKey, day, slot));
+  }
+
+  function lockCell(state, classKey, day, slot, on) {
+    const k = cellKey(classKey, day, slot);
+    if (on) { if (!state.locks.includes(k)) state.locks.push(k); }
+    else state.locks = state.locks.filter(x => x !== k);
+  }
+
+  /* =============================================================================
+     8) 수동 수정 · undo / redo (메모리만, 전역 스택)
+     ============================================================================= */
+  let undoPast = [];
+  let undoFuture = [];
+
+  function pushUndo() {
+    undoPast.push(deepClone(state));
+    if (undoPast.length > 60) undoPast.shift();
+    undoFuture = [];
+  }
+
+  function undo() {
+    if (!undoPast.length) return;
+    undoFuture.push(deepClone(state));
+    state = undoPast.pop();
+    ensureScheduleBuckets(state);
+    saveStateDebounced(state);
+    renderAll();
+  }
+
+  function redo() {
+    if (!undoFuture.length) return;
+    undoPast.push(deepClone(state));
+    state = undoFuture.pop();
+    ensureScheduleBuckets(state);
+    saveStateDebounced(state);
+    renderAll();
+  }
+
+  document.addEventListener('keydown', e => {
+    const tag = (e.target && e.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
+  });
+
+  /* =============================================================================
+     5) 전담 시간표 추천 생성 · 6) 특별실 추천 · 7) 충돌 검사
+     ============================================================================= */
+  function teacherById(id) { return state.teachers.find(t => t.id === id); }
+
+  function slotOrderForDay(st, grade, day) {
+    return slotsForGradeDay(st, grade, day);
+  }
+
+  /** 전담 과목에 연동된 특별실 종류(kind). */
+  function effectiveRoomLinkForSubject(st, subject, grade) {
+    const byGrade = st.subjectRoomLinksByGrade || {};
+    const gRow = byGrade[grade] || byGrade[String(grade)] || {};
+    const kg = gRow[subject];
+    if (kg && kg !== 'none') return kg;
+    if (kg === 'none') return null;
+    const links = st.subjectRoomLinks || {};
+    const k = links[subject];
+    if (!k || k === 'none') return null;
+    return k;
+  }
+
+  function roomsOfKindForGrade(st, kind, g) {
+    return st.rooms.filter(r => r.kind === kind && (r.allowedGrades || []).includes(g))
+      .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+  }
+
+  /** 해당 교시에 학급 단위로 배치 가능한 실이 남았는지 */
+  function roomKindHasClassSlot(st, kind, g, day, slot) {
+    const list = roomsOfKindForGrade(st, kind, g);
+    if (!list.length) return true;
+    return list.some(r => {
+      const occ = (st.schedule.byRoom[r.id][day][slot] || []).filter(x => x.kind === 'class').length;
+      return occ < (r.capacity || 1);
+    });
+  }
+
+  /** 학급 수업에 배정할 방 id (우선순위·수용 순). 없으면 null */
+  function pickRoomIdForClassLesson(st, kind, ck, g, day, slot) {
+    const list = roomsOfKindForGrade(st, kind, g);
+    for (const r of list) {
+      const occ = (st.schedule.byRoom[r.id][day][slot] || []).filter(x => x.kind === 'class').length;
+      if (occ < (r.capacity || 1)) return r.id;
+    }
+    return null;
+  }
+
+  /** 교사·학급 금지 및 일간 시수 */
+  function teacherBanned(st, tid, day, slot) {
+    const t = teacherById(tid); if (!t || !t.banned) return false;
+    return t.banned.some(b => b.day === day && b.period === slot);
+  }
+
+  function gradeBannedSlot(st, grade, slot) {
+    return (st.gradeBans || []).some(b => b.grade === grade && b.period === slot);
+  }
+
+  function classBannedSlot(st, ck, day, slot) {
+    return (st.classBans || []).some(b => b.classKey === ck && b.day === day && b.period === slot);
+  }
+
+  function countTeacherDay(st, tid, day) {
+    let n = 0;
+    listAllClassKeys(st).forEach(ck => {
+      const g = parseClassKey(ck).grade;
+      const slots = slotsForGradeDay(st, g, day);
+      slots.forEach(s => {
+        const c = getCell(st, ck, day, s);
+        if (c && c.teacherId === tid) n++;
+      });
+    });
+    return n;
+  }
+
+  function isCellFree(st, ck, day, slot) {
+    if (isLocked(st, ck, day, slot)) return false;
+    return !getCell(st, ck, day, slot);
+  }
+
+  function clearNonLocked(st) {
+    listAllClassKeys(st).forEach(ck => {
+      DAYS.forEach(d => {
+        const g = parseClassKey(ck).grade;
+        slotsForGradeDay(st, g, d).forEach(s => {
+          if (!isLocked(st, ck, d, s)) {
+            delete st.schedule.byClass[ck][d][s];
+          }
+        });
+      });
+    });
+    st.rooms.forEach(r => {
+      DAYS.forEach(d => { st.schedule.byRoom[r.id][d] = {}; });
+    });
+  }
+
+  function setLesson(st, ck, day, slot, o) {
+    st.schedule.byClass[ck][day][slot] = o;
+  }
+
+  /** 동일 학급-요일-교시의 기존 class/grade 특별실 배정을 모두 제거 */
+  function clearClassRoomAssignmentsAtSlot(st, ck, day, slot) {
+    const grade = parseClassKey(ck).grade;
+    st.rooms.forEach(r => {
+      const arr = (((st.schedule.byRoom || {})[r.id] || {})[day] || {})[slot];
+      if (!Array.isArray(arr) || !arr.length) return;
+      const filtered = arr.filter(x => {
+        if (x.kind === 'class' && x.classKey === ck) return false;
+        if (x.kind === 'grade' && String(x.classKey).startsWith(String(grade))) return false;
+        return true;
+      });
+      if (filtered.length) st.schedule.byRoom[r.id][day][slot] = filtered;
+      else delete st.schedule.byRoom[r.id][day][slot];
+    });
+  }
+
+  /** 추천 배치(source=recommend)만 남기고, 전담과 연동된 실은 전부 지운 뒤 학급 시간표 기준으로 다시 채움 */
+  function syncDerivedFromLessons(st) {
+    ensureScheduleBuckets(st);
+    st.rooms.forEach(r => {
+      DAYS.forEach(d => {
+        const dayMap = st.schedule.byRoom[r.id][d];
+        Object.keys(dayMap).forEach(s => {
+          const kept = (dayMap[s] || []).filter(x => x.source === 'recommend');
+          if (kept.length) dayMap[s] = kept;
+          else delete dayMap[s];
+        });
+      });
+    });
+    listAllClassKeys(st).forEach(ck => {
+      const g = parseClassKey(ck).grade;
+      DAYS.forEach(d => {
+        slotsForGradeDay(st, g, d).forEach(s => {
+          const c = getCell(st, ck, d, s);
+          if (!c || !c.subject) return;
+          clearClassRoomAssignmentsAtSlot(st, ck, d, s);
+          const kind = effectiveRoomLinkForSubject(st, c.subject, g);
+          if (!kind) return;
+          const rid = pickRoomIdForClassLesson(st, kind, ck, g, d, s);
+          if (!rid || !st.schedule.byRoom[rid]) return;
+          if (!st.schedule.byRoom[rid][d][s]) st.schedule.byRoom[rid][d][s] = [];
+          const arr = st.schedule.byRoom[rid][d][s];
+          const cap = (st.rooms.find(x => x.id === rid) || {}).capacity || 1;
+          const classOcc = arr.filter(x => x.kind === 'class').length;
+          if (classOcc >= cap) return;
+          const lab = ck + ' ' + c.subject;
+          if (arr.some(x => x.kind === 'class' && x.classKey === ck && x.subjectTag === c.subject)) return;
+          arr.push({ classKey: ck, label: lab, kind: 'class', source: 'lesson', subjectTag: c.subject });
+        });
+      });
+    });
+  }
+
+  function placeOrError(st, teacherId, ck, day, slot, subject) {
+    const g = parseClassKey(ck).grade;
+    if (!slotsForGradeDay(st, g, day).includes(slot)) return '슬롯없음';
+    if (gradeBannedSlot(st, g, slot)) return '학년금지';
+    if (classBannedSlot(st, ck, day, slot)) return '학급금지';
+    if (teacherBanned(st, teacherId, day, slot)) return '교사금지';
+    const tch = teacherById(teacherId);
+    if (!isCellFree(st, ck, day, slot)) return '학급중복';
+    const sameSubjectToday = slotsForGradeDay(st, g, day).reduce((acc, s) => {
+      const c = getCell(st, ck, day, s);
+      return acc + (c && c.subject === subject ? 1 : 0);
+    }, 0);
+    if (sameSubjectToday >= 2) return '과목일한도';
+    const linkKind = effectiveRoomLinkForSubject(st, subject, g);
+    if (linkKind && !roomKindHasClassSlot(st, linkKind, g, day, slot)) return '연동실풀';
+    const dupT = listAllClassKeys(st).some(oCk => {
+      const oc = getCell(st, oCk, day, slot);
+      return oc && oc.teacherId === teacherId;
+    });
+    if (dupT) return '교사중복';
+    const lesson = { subject, teacherId, teacherName: (tch && tch.name) || '', locked: false };
+    setLesson(st, ck, day, slot, lesson);
+    // 전체 재동기화(syncDerivedFromLessons) 대신 방금 배정된 슬롯만 incremental 업데이트
+    // (linkKind는 위에서 이미 선언됨)
+    if (linkKind) {
+      const rid = pickRoomIdForClassLesson(st, linkKind, ck, g, day, slot);
+      if (rid && st.schedule.byRoom[rid]) {
+        if (!st.schedule.byRoom[rid][day][slot]) st.schedule.byRoom[rid][day][slot] = [];
+        const arr = st.schedule.byRoom[rid][day][slot];
+        const cap = (st.rooms.find(x => x.id === rid) || {}).capacity || 1;
+        if (arr.filter(x => x.kind === 'class').length < cap &&
+            !arr.some(x => x.kind === 'class' && x.classKey === ck)) {
+          arr.push({ classKey: ck, label: ck + ' ' + subject, kind: 'class', source: 'lesson', subjectTag: subject });
+        }
+      }
+    }
+    return null;
+  }
+
+  function removeLesson(st, ck, day, slot) {
+    if (isLocked(st, ck, day, slot)) return;
+    delete st.schedule.byClass[ck][day][slot];
+    clearClassRoomAssignmentsAtSlot(st, ck, day, slot);
+  }
+
+  function tryPlaceSingle(st, teacherId, ck, subject, preferEarly) {
+    const g = parseClassKey(ck).grade;
+    const candidates = [];
+    DAYS.forEach(day => {
+      const order = slotOrderForDay(st, g, day);
+      const slotsTry = subject === '놀이' && g <= 2
+        ? order.filter(s => ['1','2','3','4'].includes(s))
+        : order.slice();
+      slotsTry.forEach(slot => {
+        candidates.push({ day, slot, score: scoreLessonCandidate(st, teacherId, ck, subject, day, slot, preferEarly) });
+      });
+    });
+    candidates.sort((a, b) => a.score - b.score || Math.random() - 0.5);
+    for (const c of candidates) {
+      const err = placeOrError(st, teacherId, ck, c.day, c.slot, subject);
+      if (!err) return true;
+    }
+    return false;
+  }
+
+  function scoreLessonCandidate(st, teacherId, ck, subject, day, slot, preferEarly) {
+    const g = parseClassKey(ck).grade;
+    const ord = parseSlotOrd(slot);
+    let score = 0;
+    if (slot === '6') score += 1000;
+    if (ord >= 5) score += 120;
+    if (ord === 4) score += 10;
+    if (preferEarly) score += ord * 10;
+
+    let sameSubjectToday = 0;
+    let otherSubjectToday = 0;
+    slotsForGradeDay(st, g, day).forEach(s => {
+      const c = getCell(st, ck, day, s);
+      if (!c || !c.subject) return;
+      if (c.subject === subject) sameSubjectToday++;
+      else otherSubjectToday++;
+    });
+    // 같은 과목 하루 집중 강하게 패널티 (분산 배치 유도)
+    if (sameSubjectToday >= 1) score += 300;
+    if (sameSubjectToday >= 2) score += 5000;
+    // 완전히 빈 요일보다 다른 수업 있는 요일 우대 (공강 최소화)
+    if (otherSubjectToday === 0) score += 60;
+
+    const teacherSlots = [];
+    listAllClassKeys(st).forEach(oCk => {
+      const og = parseClassKey(oCk).grade;
+      slotsForGradeDay(st, og, day).forEach(s => {
+        const c = getCell(st, oCk, day, s);
+        if (c && c.teacherId === teacherId) teacherSlots.push(parseSlotOrd(s));
+      });
+    });
+    if (teacherSlots.length) {
+      const adjacent = teacherSlots.some(n => Math.abs(n - ord) === 1);
+      const min = Math.min(...teacherSlots, ord);
+      const max = Math.max(...teacherSlots, ord);
+      const span = max - min + 1;
+      score += (span - (teacherSlots.length + 1)) * 80;
+      if (adjacent) score -= 70;
+      if (!adjacent && ord > min && ord < max) score += 180;
+    }
+    return score;
+  }
+
+  function parseSlotOrd(s) {
+    const map = { '1':1,'2':2,'3':3,'4':4,'5':5,'5A':5,'5B':5,'6':6 };
+    return map[s] || 9;
+  }
+
+  /** 연속 두 교시 (과학 연차) */
+  function tryPlaceBlock2(st, teacherId, ck, subject) {
+    const g = parseClassKey(ck).grade;
+    const candidates = [];
+    DAYS.forEach(day => {
+      const ord = slotOrderForDay(st, g, day);
+      for (let i = 0; i < ord.length - 1; i++) {
+        const a = ord[i], b = ord[i + 1];
+        if (parseSlotOrd(b) - parseSlotOrd(a) !== 1) continue;
+        candidates.push({
+          day,
+          a,
+          b,
+          score: scoreLessonCandidate(st, teacherId, ck, subject, day, a, false) +
+            scoreLessonCandidate(st, teacherId, ck, subject, day, b, false) - 120
+        });
+      }
+    });
+    candidates.sort((a, b) => a.score - b.score || Math.random() - 0.5);
+    for (const c of candidates) {
+        const r1 = placeOrError(st, teacherId, ck, c.day, c.a, subject);
+        if (r1) continue;
+        const r2 = placeOrError(st, teacherId, ck, c.day, c.b, subject);
+        if (!r2) return true;
+        removeLesson(st, ck, c.day, c.a);
+    }
+    return false;
+  }
+
+  /** 고정 배정 반영 */
+  function applyFixedAssignments(st) {
+    state.teachers.forEach(t => {
+      (t.fixed || []).forEach(fx => {
+        (fx.days || []).forEach(day => {
+          const p1 = fx.periods[0], p2 = fx.periods[1];
+          const subj = fx.subject, ck = fx.classKey;
+          if (!listAllClassKeys(st).includes(ck)) return;
+          if (p1) {
+            if (!isLocked(st, ck, day, p1)) {
+              removeLesson(st, ck, day, p1);
+              setLesson(st, ck, day, p1, { subject: subj, teacherId: t.id, teacherName: t.name, locked: false });
+              lockCell(st, ck, day, p1, true);
+            }
+          }
+          if (p2 && p2 !== p1) {
+            if (!isLocked(st, ck, day, p2)) {
+              removeLesson(st, ck, day, p2);
+              setLesson(st, ck, day, p2, { subject: subj, teacherId: t.id, teacherName: t.name, locked: false });
+              lockCell(st, ck, day, p2, true);
+            }
+          }
+        });
+      });
+    });
+    syncDerivedFromLessons(st);
+  }
+
+  function expandClassRange(st, g, from, to) {
+    const n = st.classCounts[g] || 0;
+    const a = Math.max(1, Math.min(from, to));
+    const b = Math.max(1, Math.min(to, n, from > to ? from : to));
+    const lo = Math.min(a, b), hi = Math.max(a, b);
+    const keys = [];
+    for (let c = lo; c <= hi && c <= n; c++) keys.push(classKey(g, c));
+    return keys;
+  }
+
+  function setGenProgress(msg) {
+    state.generationMeta = { ...(state.generationMeta || {}), progress: msg };
+    const el = document.getElementById('gen-progress');
+    if (el) el.textContent = msg;
+  }
+
+  async function autoGenerateTimetable() {
+    const start = Date.now();
+    const TIME_LIMIT_MS = 20000;
+    const MAX_TRIES = 120000;
+    let tries = 0;
+    normalizeRoomPriorities(state);
+    pushUndo();
+    clearNonLocked(state);
+    setGenProgress('고정 배정 적용 중...');
+    await new Promise(r => setTimeout(r, 0));
+    applyFixedAssignments(state);
+    const unplaced = [];
+    const tasks = [];
+    const priBase = { 과학: 1, 놀이: 2, 영어: 3, 체육: 4, 음악: 5, 정보: 6, 기타: 7 };
+    function taskPriorityBySettings(t, ck, sub, i) {
+      const g = parseClassKey(ck).grade;
+      const kind = effectiveRoomLinkForSubject(state, sub, g);
+      const roomPri = (() => {
+        if (!kind) return 60;
+        const rooms = roomsOfKindForGrade(state, kind, g);
+        if (!rooms.length) return 80;
+        return Math.min(...rooms.map(r => (r.priority || 99)));
+      })();
+      const base = (priBase[sub] != null ? priBase[sub] : 8) * 100;
+      const teacherMainSubjectBoost = (t.allocSubject === sub) ? -120 : 0;
+      return base + roomPri * 2 + teacherMainSubjectBoost + i;
+    }
+    state.teachers.forEach(t => {
+      (t.subjects || []).forEach(su => {
+        const keys = expandClassRange(state, su.grade, su.classFrom, su.classTo);
+        keys.forEach(ck => {
+          const sub = su.subject;
+          const h = su.hoursPerClass || 1;
+          const pb = taskPriorityBySettings(t, ck, sub, 0);
+          const seq = state.sequentialBlockSubjects && state.sequentialBlockSubjects[sub];
+          const useBlock = h >= 2 && seq;
+          if (useBlock) {
+            tasks.push({ type: 'block2', t, ck, sub, pri: pb });
+            for (let i = 0; i < h - 2; i++) tasks.push({ type: 'single', t, ck, sub, pri: taskPriorityBySettings(t, ck, sub, 1 + i) });
+          } else {
+            for (let i = 0; i < h; i++) tasks.push({ type: 'single', t, ck, sub, pri: taskPriorityBySettings(t, ck, sub, i) });
+          }
+        });
+      });
+    });
+    tasks.sort((a, b) => a.pri - b.pri);
+    const reqRows = [];
+    state.teachers.forEach(t => {
+      (t.subjects || []).forEach(su => {
+        const keys = expandClassRange(state, su.grade, su.classFrom, su.classTo);
+        keys.forEach(ck => reqRows.push({
+          teacherId: t.id,
+          teacherName: t.name,
+          ck,
+          subject: su.subject,
+          hours: Math.max(0, su.hoursPerClass || 1)
+        }));
+      });
+    });
+
+    function countAssigned(teacherId, ck, subject) {
+      let n = 0;
+      DAYS.forEach(day => {
+        const g = parseClassKey(ck).grade;
+        slotsForGradeDay(state, g, day).forEach(slot => {
+          const c = getCell(state, ck, day, slot);
+          if (c && c.teacherId === teacherId && c.subject === subject) n++;
+        });
+      });
+      return n;
+    }
+    function countTeacherAssignedTotal(teacherId) {
+      let n = 0;
+      listAllClassKeys(state).forEach(ck => {
+        const g = parseClassKey(ck).grade;
+        DAYS.forEach(day => {
+          slotsForGradeDay(state, g, day).forEach(slot => {
+            const c = getCell(state, ck, day, slot);
+            if (c && c.teacherId === teacherId) n++;
+          });
+        });
+      });
+      return n;
+    }
+
+    function subjectPri(sub) {
+      return priBase[sub] != null ? priBase[sub] : 99;
+    }
+
+    function runOnce() {
+      for (const task of tasks) {
+        if (Date.now() - start > TIME_LIMIT_MS || tries > MAX_TRIES) break;
+        // 이미 해당 학급/과목 목표 시수를 채웠으면 스킵 (이중 배정 방지)
+        const su = (task.t.subjects || []).find(s =>
+          s.subject === task.sub &&
+          expandClassRange(state, s.grade, s.classFrom, s.classTo).includes(task.ck)
+        );
+        if (su && countAssigned(task.t.id, task.ck, task.sub) >= (su.hoursPerClass || 1)) continue;
+        const st = state;
+        const tid = task.t.id;
+        tries++;
+        if (task.type === 'block2') {
+          if (!tryPlaceBlock2(st, tid, task.ck, task.sub)) {
+            if (!tryPlaceSingle(st, tid, task.ck, task.sub, task.sub === '놀이')) unplaced.push(task);
+          }
+        } else {
+          const early = task.sub === '놀이';
+          if (!tryPlaceSingle(st, tid, task.ck, task.sub, early)) unplaced.push(task);
+        }
+      }
+    }
+    function runTeacherTargetFirstPass() {
+      const teacherPlan = state.teachers.map(t => {
+        const target = Math.max(0, parseInt(t.weeklyTarget, 10) || 0);
+        const main = t.allocSubject || '';
+        const subs = (t.subjects || []).slice().sort((a, b) => {
+          if (a.subject === main && b.subject !== main) return -1;
+          if (b.subject === main && a.subject !== main) return 1;
+          return (priBase[a.subject] || 99) - (priBase[b.subject] || 99);
+        });
+        return { t, target, subs };
+      }).sort((a, b) => b.target - a.target);
+
+      for (const tp of teacherPlan) {
+        while (countTeacherAssignedTotal(tp.t.id) < tp.target) {
+          if (Date.now() - start > TIME_LIMIT_MS || tries > MAX_TRIES) break;
+          let progressed = false;
+          for (const su of tp.subs) {
+            const keys = expandClassRange(state, su.grade, su.classFrom, su.classTo)
+              .sort((a, b) => countAssigned(tp.t.id, a, su.subject) - countAssigned(tp.t.id, b, su.subject));
+            const isSeq = !!(state.sequentialBlockSubjects && state.sequentialBlockSubjects[su.subject]);
+            const needBlock = isSeq && (su.hoursPerClass || 1) >= 2;
+            for (const ck of keys) {
+              // 해당 학급/과목 목표 시수 이미 충족 시 스킵
+              if (countAssigned(tp.t.id, ck, su.subject) >= (su.hoursPerClass || 1)) continue;
+              tries++;
+              // 연차시 과목이고 아직 미배정 상태이면 연속 블록 우선 시도
+              const alreadyPlaced = countAssigned(tp.t.id, ck, su.subject);
+              const ok = (needBlock && alreadyPlaced === 0)
+                ? (tryPlaceBlock2(state, tp.t.id, ck, su.subject) || tryPlaceSingle(state, tp.t.id, ck, su.subject, false))
+                : tryPlaceSingle(state, tp.t.id, ck, su.subject, su.subject === '놀이');
+              if (ok) {
+                progressed = true;
+                break;
+              }
+            }
+            if (progressed) break;
+          }
+          if (!progressed) break;
+        }
+      }
+    }
+    setGenProgress('교사 목표시수 우선 배정 중... (1/4)');
+    await new Promise(r => setTimeout(r, 0));
+    runTeacherTargetFirstPass();
+    setGenProgress('전체 과목 배정 중... (2/4)');
+    await new Promise(r => setTimeout(r, 0));
+    runOnce();
+    setGenProgress('미배정 보완 중... (3/4)');
+    await new Promise(r => setTimeout(r, 0));
+    for (let pass = 0; pass < 4; pass++) {
+      if (Date.now() - start > TIME_LIMIT_MS || tries > MAX_TRIES) break;
+      let progressed = false;
+      const deficitRows = reqRows
+        .map(r => ({ ...r, deficit: r.hours - countAssigned(r.teacherId, r.ck, r.subject) }))
+        .filter(r => r.deficit > 0)
+        .sort((a, b) => {
+          if (a.subject === '영어' && b.subject !== '영어') return -1;
+          if (b.subject === '영어' && a.subject !== '영어') return 1;
+          return b.deficit - a.deficit || subjectPri(a.subject) - subjectPri(b.subject);
+        });
+      for (const row of deficitRows) {
+        for (let i = 0; i < row.deficit; i++) {
+          tries++;
+          if (Date.now() - start > TIME_LIMIT_MS || tries > MAX_TRIES) break;
+          const ok = tryPlaceSingle(state, row.teacherId, row.ck, row.subject, row.subject === '놀이');
+          if (ok) progressed = true;
+        }
+      }
+      if (!progressed) break;
+    }
+    reqRows.forEach(r => {
+      const assigned = countAssigned(r.teacherId, r.ck, r.subject);
+      if (assigned < r.hours) {
+        const miss = r.hours - assigned;
+        for (let i = 0; i < miss; i++) {
+          unplaced.push({ type: 'single', t: { id: r.teacherId, name: r.teacherName }, ck: r.ck, sub: r.subject, reason: 'deficit' });
+        }
+      }
+    });
+    setGenProgress('특별실 배정 중... (4/4)');
+    await new Promise(r => setTimeout(r, 0));
+    syncDerivedFromLessons(state);
+    recommendSpecialRooms();
+    runConflictCheck();
+    state.generationMeta = {
+      message: '자동 생성 완료 (추천안). 미배정이 있으면 수동으로 배치하세요.',
+      unplaced,
+      tries,
+      ms: Date.now() - start
+    };
+    saveStateDebounced(state);
+  }
+
+  /* =============================================================================
+     6) 특별실 추천 배치 (체육관·운동장·컴실·도서·음악)
+     ============================================================================= */
+  function classFreeSlot(st, ck, day, slot) {
+    const g = parseClassKey(ck).grade;
+    if (!slotsForGradeDay(st, g, day).includes(slot)) return false;
+    if (isLocked(st, ck, day, slot)) return false;
+    if (getCell(st, ck, day, slot)) return false;
+    return !st.rooms.some(r => {
+      const arr = (((st.schedule.byRoom || {})[r.id] || {})[day] || {})[slot] || [];
+      return arr.some(x =>
+        (x.kind === 'class' && x.classKey === ck) ||
+        (x.kind === 'grade' && String(x.classKey).startsWith(String(g)))
+      );
+    });
+  }
+
+  function recommendSpecialRooms() {
+    const st = state;
+    const gym = st.rooms.find(r => r.kind === 'gym');
+    const field = st.rooms.find(r => r.kind === 'field');
+    const pc2 = st.rooms.find(r => r.kind === 'computer2');
+    const pc4 = st.rooms.find(r => r.kind === 'computer4');
+    const lib = st.rooms.find(r => r.kind === 'library');
+    const music = st.rooms.find(r => r.kind === 'music');
+
+    function classHasAnySpecialRoom(ck, day, slot) {
+      const grade = parseClassKey(ck).grade;
+      return st.rooms.some(r => {
+        const arr = (((st.schedule.byRoom || {})[r.id] || {})[day] || {})[slot] || [];
+        return arr.some(x =>
+          (x.kind === 'class' && x.classKey === ck) ||
+          (x.kind === 'grade' && String(x.classKey).startsWith(String(grade)))
+        );
+      });
+    }
+    function addRoomCell(rid, day, slot, entry) {
+      if (!st.schedule.byRoom[rid]) return false;
+      if (!st.schedule.byRoom[rid][day][slot]) st.schedule.byRoom[rid][day][slot] = [];
+      const arr = st.schedule.byRoom[rid][day][slot];
+      const cap = (st.rooms.find(r => r.id === rid) || {}).capacity || 1;
+      const e = { ...entry, source: 'recommend' };
+      if (e.kind === 'class' && e.classKey && classHasAnySpecialRoom(e.classKey, day, slot)) return false;
+      if (e.kind === 'grade') {
+        const grade = parseInt(String(e.classKey), 10);
+        if (listAllClassKeys(st).some(ck => parseClassKey(ck).grade === grade && !classFreeSlot(st, ck, day, slot))) return false;
+      }
+      if (arr.some(x => x.kind === e.kind && x.classKey === e.classKey)) return false;
+      if (arr.length < cap) {
+        arr.push(e);
+        return true;
+      }
+      return false;
+    }
+    function countRoomAssignmentsForClass(rid, classKey) {
+      let n = 0;
+      DAYS.forEach(d => {
+        ['1','2','3','4','5','5A','5B','6'].forEach(s => {
+          const arr = (st.schedule.byRoom[rid] && st.schedule.byRoom[rid][d] && st.schedule.byRoom[rid][d][s]) || [];
+          if (arr.some(x => x.kind === 'class' && x.classKey === classKey)) n++;
+        });
+      });
+      return n;
+    }
+    function countRoomAssignmentsForGrade(rid, grade) {
+      let n = 0;
+      DAYS.forEach(d => {
+        ['1','2','3','4','5','5A','5B','6'].forEach(s => {
+          const arr = (st.schedule.byRoom[rid] && st.schedule.byRoom[rid][d] && st.schedule.byRoom[rid][d][s]) || [];
+          if (arr.some(x => x.kind === 'grade' && String(x.classKey).startsWith(String(grade)))) n++;
+        });
+      });
+      return n;
+    }
+
+    function gymFieldCandidates(ck, day, slot) {
+      const g = parseClassKey(ck).grade;
+      if (!slotsForGradeDay(st, g, day).includes(slot)) return false;
+      if (!classFreeSlot(st, ck, day, slot)) return false;
+      if (gradeBannedSlot(st, g, slot)) return false;
+      return true;
+    }
+
+    if (gym) {
+      const gymWeekly = Math.max(0, gym.weeklyTarget || 1);
+      [3,4,5,6].forEach(g => {
+        const n = st.classCounts[g] || 0;
+        for (let c = 1; c <= n; c++) {
+          const ck = classKey(g, c);
+          while (countRoomAssignmentsForClass(gym.id, ck) < gymWeekly) {
+            let placed = false;
+            outer: for (const day of DAYS) {
+              for (const slot of slotsForGradeDay(st, g, day)) {
+                if (gymFieldCandidates(ck, day, slot) && !(st.schedule.byRoom[gym.id][day][slot] || []).some(x => x.classKey === ck)) {
+                  if (addRoomCell(gym.id, day, slot, { classKey: ck, label: ck + ' 체육', kind: 'class' })) {
+                    placed = true;
+                    break outer;
+                  }
+                }
+              }
+            }
+            if (!placed) break;
+          }
+        }
+      });
+      [1,2].forEach(g => {
+        const target = Math.max(0, gym.weeklyTarget || 1);
+        for (const day of DAYS) {
+          if (countRoomAssignmentsForGrade(gym.id, g) >= target) break;
+          for (const slot of slotsForGradeDay(st, g, day)) {
+            if (!gradeBannedSlot(st, g, slot) && (st.schedule.byRoom[gym.id][day][slot] || []).length < gym.capacity) {
+              if (addRoomCell(gym.id, day, slot, { classKey: g + '학년', label: g + '학년 체육', kind: 'grade' })) break;
+            }
+          }
+        }
+      });
+    }
+
+    if (field) {
+      const fieldWeekly = Math.max(0, field.weeklyTarget || 1);
+      const gymDaysByClass = {};
+      listAllClassKeys(st).forEach(ck => {
+        const g = parseClassKey(ck).grade;
+        DAYS.forEach(d => {
+          slotsForGradeDay(st, g, d).forEach(s => {
+            const arr = (st.schedule.byRoom[gym && gym.id] && st.schedule.byRoom[gym.id][d][s]) || [];
+            if (arr.some(x => x.classKey === ck)) gymDaysByClass[ck] = gymDaysByClass[ck] || {};
+            if (arr.some(x => x.classKey === ck)) gymDaysByClass[ck][d] = true;
+          });
+        });
+      });
+      listAllClassKeys(st).forEach(ck => {
+        const g = parseClassKey(ck).grade;
+        while (countRoomAssignmentsForClass(field.id, ck) < fieldWeekly) {
+          let placed = false;
+          for (const day of DAYS) {
+            if (gymDaysByClass[ck] && gymDaysByClass[ck][day]) continue;
+            for (const slot of slotsForGradeDay(st, g, day)) {
+              if (g <= 2 && slot === '6') continue;
+              if (day === 'thu' && slot === '6') continue;
+              if (fieldBanned(st, g, day, slot)) continue;
+              if (gymFieldCandidates(ck, day, slot) && !(st.schedule.byRoom[field.id][day][slot] || []).some(x => x.classKey === ck)) {
+                if (addRoomCell(field.id, day, slot, { classKey: ck, label: ck + ' 운동장', kind: 'class' })) {
+                  placed = true;
+                  break;
+                }
+              }
+            }
+            if (placed) break;
+          }
+          if (!placed) break;
+        }
+      });
+    }
+
+    function pcBanned(r, day, slot) {
+      if (!r) return true;
+      if (r.kind === 'computer2' && (day === 'mon' || day === 'fri') && slot === '6') return true;
+      if (r.kind === 'computer4' && ['mon','tue','wed','thu'].includes(day) && slot === '6') return true;
+      return false;
+    }
+
+    [pc2, pc4].forEach(room => {
+      if (!room) return;
+      const target = Math.max(0, room.weeklyTarget || 1);
+      const grades = room.allowedGrades || [];
+      grades.forEach(g => {
+        const n = st.classCounts[g] || 0;
+        for (let c = 1; c <= n; c++) {
+          const ck = classKey(g, c);
+          while (countRoomAssignmentsForClass(room.id, ck) < target) {
+            let placed = false;
+            outerPc: for (const day of DAYS) {
+              for (const slot of slotsForGradeDay(st, g, day)) {
+                if (pcBanned(room, day, slot)) continue;
+                if (!classFreeSlot(st, ck, day, slot)) continue;
+                if ((st.schedule.byRoom[room.id][day][slot] || []).some(x => x.classKey === ck)) continue;
+                if (addRoomCell(room.id, day, slot, { classKey: ck, label: ck + ' 컴실', kind: 'class' })) {
+                  placed = true;
+                  break outerPc;
+                }
+              }
+            }
+            if (!placed) break;
+          }
+        }
+      });
+    });
+
+    [lib, music].forEach(room => {
+      if (!room) return;
+      const target = Math.max(0, room.weeklyTarget || 1);
+      GRADES.forEach(g => {
+        if (!(room.allowedGrades || []).includes(g)) return;
+        while (countRoomAssignmentsForGrade(room.id, g) < target) {
+          let placed = false;
+          for (const day of DAYS) {
+            for (const slot of slotsForGradeDay(st, g, day)) {
+              if (room.kind === 'music' && slot === '6') continue;
+              if (addRoomCell(room.id, day, slot, { classKey: g + '학년', label: g + '학년 ' + room.name, kind: 'grade' })) {
+                placed = true;
+                break;
+              }
+            }
+            if (placed) break;
+          }
+          if (!placed) break;
+        }
+      });
+    });
+
+    // 위 6종(gym/field/computer2/computer4/library/music) 외 나머지 특별실 일반 처리
+    // (과학실·다목적실·기타 등 kind가 하드코딩 목록에 없는 방)
+    const handledKinds = new Set(['gym', 'field', 'computer2', 'computer4', 'library', 'music']);
+    st.rooms.filter(r => !handledKinds.has(r.kind)).forEach(room => {
+      const target = Math.max(0, room.weeklyTarget || 0);
+      if (!target) return;
+      (room.allowedGrades || []).forEach(g => {
+        const n = st.classCounts[g] || 0;
+        for (let c = 1; c <= n; c++) {
+          const ck = classKey(g, c);
+          while (countRoomAssignmentsForClass(room.id, ck) < target) {
+            let placed = false;
+            for (const day of DAYS) {
+              for (const slot of slotsForGradeDay(st, g, day)) {
+                if (!classFreeSlot(st, ck, day, slot)) continue;
+                if (((st.schedule.byRoom[room.id] || {})[day] || {})[slot] &&
+                    st.schedule.byRoom[room.id][day][slot].some(x => x.classKey === ck)) continue;
+                if (addRoomCell(room.id, day, slot, { classKey: ck, label: ck + ' ' + room.name, kind: 'class' })) {
+                  placed = true;
+                  break;
+                }
+              }
+              if (placed) break;
+            }
+            if (!placed) break;
+          }
+        }
+      });
+    });
+  }
+
+  function fieldBanned(st, g, day, slot) {
+    return false;
+  }
+
+  /* =============================================================================
+     7) 충돌 검사
+     ============================================================================= */
+  function keyErr(st, k, code, msg, sev) {
+    return { key: k, code, message: msg, severity: sev || 'error' };
+  }
+
+  function runConflictCheck() {
+    const err = [];
+    const warn = [];
+    const st = state;
+    syncDerivedFromLessons(st);
+
+    const teacherSlotMap = {};
+    function tkey(tid, d, s) { return tid + '|' + d + '|' + s; }
+
+    listAllClassKeys(st).forEach(ck => {
+      const g = parseClassKey(ck).grade;
+      DAYS.forEach(d => {
+        slotsForGradeDay(st, g, d).forEach(s => {
+          const c = getCell(st, ck, d, s);
+          if (!c || !c.subject) return;
+          const tk = tkey(c.teacherId, d, s);
+          if (teacherSlotMap[tk] && teacherSlotMap[tk] !== ck) {
+            err.push(keyErr(st, cellKey(ck,d,s), 'DUP_TEACHER', '같은 교사 동시 수업', 'error'));
+          }
+          teacherSlotMap[tk] = ck;
+        });
+      });
+    });
+
+    listAllClassKeys(st).forEach(ck => {
+      const g = parseClassKey(ck).grade;
+      DAYS.forEach(d => {
+        slotsForGradeDay(st, g, d).forEach(s => {
+          const c = getCell(st, ck, d, s);
+          if (!c || !c.subject) return;
+          const classRoomCount = st.rooms.reduce((acc, r) => {
+            const arr = (((st.schedule.byRoom || {})[r.id] || {})[d] || {})[s] || [];
+            return acc + (arr.some(x => x.kind === 'class' && x.classKey === ck) ? 1 : 0);
+          }, 0);
+          if (classRoomCount > 1) {
+            err.push(keyErr(st, cellKey(ck,d,s), 'CLASS_MULTI_ROOM', '한 교시에 여러 특별실이 배정됨', 'error'));
+          }
+          const lk = effectiveRoomLinkForSubject(st, c.subject, g);
+          const badRoom = st.rooms.some(r => {
+            const arr = (st.schedule.byRoom[r.id][d][s] || []);
+            if (!arr.some(x => x.kind === 'class' && x.classKey === ck)) return false;
+            if (lk && r.kind === lk) return false;
+            return true;
+          });
+          if (badRoom) err.push(keyErr(st, cellKey(ck,d,s), 'CLASS_ROOM', '전담과 다른 특별실 동시 사용', 'error'));
+        });
+      });
+    });
+
+    st.rooms.filter(r => r.kind === 'science').forEach(r => {
+      DAYS.forEach(d => {
+        ['1','2','3','4','5','5A','5B','6'].forEach(s => {
+          const arr = (st.schedule.byRoom[r.id] && st.schedule.byRoom[r.id][d] && st.schedule.byRoom[r.id][d][s]) || [];
+          const cls = arr.filter(x => x.kind === 'class');
+          if (cls.length > 1) err.push(keyErr(st, r.id + '|' + d + '|' + s, 'SCI_ROOM', r.name + ' 동시 2학급 이상', 'error'));
+        });
+      });
+    });
+
+    const multi = st.rooms.find(x => x.kind === 'multi');
+    if (multi) {
+      DAYS.forEach(d => {
+        ['1','2','3','4','5','5A','5B','6'].forEach(s => {
+          const arr = (st.schedule.byRoom[multi.id][d][s] || []);
+          if (arr.length > (multi.capacity || 1)) err.push(keyErr(st, multi.id + '|' + d + '|' + s, 'MULTI_CAP', '다목적실 수용 초과', 'error'));
+        });
+      });
+    }
+
+    st.rooms.filter(r => r.kind === 'gym' || r.kind === 'field').forEach(r => {
+      DAYS.forEach(d => {
+        ['1','2','3','4','5','5A','5B','6'].forEach(s => {
+          const arr = st.schedule.byRoom[r.id][d][s] || [];
+          if (arr.length > (r.capacity || 1)) err.push(keyErr(st, r.id + '|' + d + '|' + s, 'ROOM_CAP', r.name + ' 수용 학급 초과', 'error'));
+        });
+      });
+    });
+
+    [st.rooms.find(r => r.kind === 'computer2'), st.rooms.find(r => r.kind === 'computer4')].forEach(r => {
+      if (!r) return;
+      DAYS.forEach(d => {
+        ['1','2','3','4','5','5A','5B','6'].forEach(s => {
+          const arr = st.schedule.byRoom[r.id][d][s] || [];
+          if (arr.filter(x => x.kind === 'class').length > (r.capacity || 1))
+            err.push(keyErr(st, r.id + '|' + d + '|' + s, 'PC_CAP', r.name + ' 수용 초과', 'error'));
+        });
+      });
+    });
+
+    st.rooms.forEach(r => {
+      const target = Math.max(0, r.weeklyTarget || 0);
+      if (!target) return;
+      if (r.byClass) {
+        (r.allowedGrades || []).forEach(g => {
+          const n = st.classCounts[g] || 0;
+          for (let c = 1; c <= n; c++) {
+            const ck = classKey(g, c);
+            let cnt = 0;
+            DAYS.forEach(d => {
+              slotsForGradeDay(st, g, d).forEach(s => {
+                const arr = (((st.schedule.byRoom || {})[r.id] || {})[d] || {})[s] || [];
+                if (arr.some(x => x.kind === 'class' && x.classKey === ck)) cnt++;
+              });
+            });
+            if (cnt < target) err.push(keyErr(st, r.id + '|' + ck, 'ROOM_WEEKLY_MISS', `${r.name} ${ck} 주당 배정 부족 (${cnt}/${target})`, 'error'));
+          }
+        });
+      }
+      if (r.byGrade) {
+        (r.allowedGrades || []).forEach(g => {
+          let cnt = 0;
+          DAYS.forEach(d => {
+            ['1','2','3','4','5','5A','5B','6'].forEach(s => {
+              const arr = (((st.schedule.byRoom || {})[r.id] || {})[d] || {})[s] || [];
+              if (arr.some(x => x.kind === 'grade' && String(x.classKey).startsWith(String(g)))) cnt++;
+            });
+          });
+          if (cnt < target) err.push(keyErr(st, r.id + '|' + g + '학년', 'ROOM_WEEKLY_MISS', `${r.name} ${g}학년 주당 배정 부족 (${cnt}/${target})`, 'error'));
+        });
+      }
+    });
+
+    listAllClassKeys(st).forEach(ck => {
+      const g = parseClassKey(ck).grade;
+      DAYS.forEach(d => {
+        const engSlots = [];
+        slotsForGradeDay(st, g, d).forEach(s => {
+          const c = getCell(st, ck, d, s);
+          if (c && c.subject === '영어') engSlots.push(s);
+        });
+        if (engSlots.length >= 2) warn.push(keyErr(st, cellKey(ck, d, engSlots[0]), 'ENG_SAME_DAY', '같은 날 영어 2시간 이상', 'warning'));
+      });
+    });
+
+    // 교사 일일한도 경고는 자동생성 성능/복잡도 문제로 기본 비활성화.
+
+    state.conflicts = { errors: err, warnings: warn };
+  }
+
+  /* =============================================================================
+     자동 생성 패널 · 뷰 · 충돌 UI · 입출력 · 모달
+     ============================================================================= */
+  let modalAction = null;
+
+  function openModal(title, html, onOk) {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').innerHTML = html;
+    document.getElementById('modal-overlay').classList.add('open');
+    modalAction = onOk;
+  }
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    modalAction = null;
+  }
+  document.getElementById('modal-cancel').addEventListener('click', closeModal);
+  document.getElementById('modal-ok').addEventListener('click', () => {
+    if (modalAction) modalAction();
+    closeModal();
+  });
+
+  function conflictClassForKey(k) {
+    const ks = new Set();
+    (state.conflicts.errors || []).forEach(e => { if (e.key) ks.add(e.key); });
+    const hasE = ks.has(k);
+    const kw = (state.conflicts.warnings || []).some(w => w.key === k);
+    if (hasE) return 'conflict-err';
+    if (kw) return 'conflict-warn';
+    return '';
+  }
+
+  /** 자동생성 탭에 나열할 과목(전담 배정 + 기본 목록 순) */
+  function collectSubjectsForAutoPanel() {
+    const set = new Set(SUBJECT_ORDER);
+    state.teachers.forEach(t => (t.subjects || []).forEach(s => { if (s.subject) set.add(s.subject); }));
+    const extra = [...set].filter(s => SUBJECT_ORDER.indexOf(s) < 0).sort();
+    return SUBJECT_ORDER.filter(s => set.has(s)).concat(extra);
+  }
+
+  /** 전담교사 과목 행 기준: 자동 생성으로 넣게 될 총 교시 수 */
+  function aggregatePlannedHoursBySubject() {
+    const map = {};
+    state.teachers.forEach(t => {
+      (t.subjects || []).forEach(su => {
+        const nClass = expandClassRange(state, su.grade, su.classFrom, su.classTo).length;
+        const h = su.hoursPerClass || 1;
+        map[su.subject] = (map[su.subject] || 0) + nClass * h;
+      });
+    });
+    return map;
+  }
+
+  function maxHoursPerClassForSubject(sub) {
+    let m = 0;
+    state.teachers.forEach(t => (t.subjects || []).forEach(su => {
+      if (su.subject === sub) m = Math.max(m, su.hoursPerClass || 1);
+    }));
+    return m;
+  }
+
+  function renderPanelAuto() {
+    const el = document.getElementById('panel-auto');
+    const meta = state.generationMeta || {};
+    const subjects = collectSubjectsForAutoPanel();
+    const hoursMap = aggregatePlannedHoursBySubject();
+    const kindOpts = state.roomKindOptions || CORE_ROOM_KINDS.map(k => ({ key:k, label: ROOM_KIND_LABEL[k] || k }));
+    const linkSelect = (sub, cur, idx, grade) => {
+      const opts = '<option value="none">(연동 없음)</option>' + kindOpts.map(k =>
+        `<option value="${esc(k.key)}" ${cur === k.key ? 'selected' : ''}>${esc(k.label)} (${esc(k.key)})</option>`
+      ).join('');
+      if (grade == null) return `<select class="auto-link" data-idx="${idx}">${opts}</select>`;
+      return `<select class="auto-link-grade" data-idx="${idx}" data-grade="${grade}">${opts}</select>`;
+    };
+    const rows = subjects.map((sub, idx) => {
+      const total = hoursMap[sub] || 0;
+      const maxH = maxHoursPerClassForSubject(sub);
+      const seq = !!(state.sequentialBlockSubjects && state.sequentialBlockSubjects[sub]);
+      const linkVal = (state.subjectRoomLinks && state.subjectRoomLinks[sub]) || 'none';
+      const byG = state.subjectRoomLinksByGrade || {};
+      const canSeq = maxH >= 2;
+      return `<tr>
+        <td style="padding:6px"><strong>${esc(sub)}</strong></td>
+        <td style="padding:6px;text-align:right">${total}</td>
+        <td style="padding:6px;text-align:center">
+          <label><input type="checkbox" class="auto-seq" data-idx="${idx}" ${seq ? 'checked' : ''} ${canSeq ? '' : 'disabled'} title="${canSeq ? '2시간 이상인 학급이 있을 때만 적용됩니다.' : '해당 과목은 학급당 1시간 이하만 배정됨'}"/> 연차시</label>
+        </td>
+        <td style="padding:6px">${linkSelect(sub, linkVal, idx)}</td>
+        ${GRADES.map(g => {
+          const gv = ((byG[g] || {})[sub] || 'none');
+          return `<td style="padding:6px">${linkSelect(sub, gv, idx, g)}</td>`;
+        }).join('')}
+      </tr>`;
+    }).join('');
+    el.innerHTML = `
+      <h2>자동 생성 (추천안)</h2>
+      <p class="hint">완성 보장이 아닙니다. 생성 후 반드시 충돌 검사 및 수동 수정을 하세요.</p>
+      <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px;background:#f7f8fa">
+        <h3>배정 대상 과목 · 연차시 · 특별실 연동</h3>
+        <p class="hint">「총 시수」는 전담교사 탭의 과목·학급 범위·학급당 시수를 곱한 합계입니다. 연차시는 <strong>학급당 2시간 이상</strong>인 과목에만 의미가 있습니다. 특별실 연동은 해당 과목 수업 교시에 같은 실이 자동으로 잡힙니다(예: 과학→과학실, 체육→체육관 또는 운동장).</p>
+        <table style="width:100%;max-width:100%;border-collapse:collapse;font-size:13px;border:1px solid var(--border)">
+          <thead><tr style="background:#eef2ff">
+            <th style="padding:6px;text-align:left">과목</th>
+            <th style="padding:6px;text-align:right">총 시수</th>
+            <th style="padding:6px;text-align:center">연차시(2연속)</th>
+            <th style="padding:6px;text-align:left">공통 특별실</th>
+            ${GRADES.map(g => `<th style="padding:6px;text-align:left">${g}학년 특별실</th>`).join('')}
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="btn-row" style="margin-top:8px">
+          <button class="btn btn-primary" type="button" id="btn-save-gen-opts">이 설정 저장</button>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="btn-run-auto">전담 + 특별실 추천 생성</button>
+        <button class="btn" type="button" id="btn-run-conflict">충돌 다시 검사</button>
+      </div>
+      <p id="gen-progress" style="color:#555;font-style:italic;min-height:1.4em">${esc(meta.progress || '')}</p>
+      <p>마지막 실행: ${esc(meta.message || '')} / 시도 ${meta.tries || 0} / ${meta.ms || 0}ms</p>
+      <pre style="font-size:11px;background:#f7f7f7;padding:8px;max-height:120px;overflow:auto">${esc(JSON.stringify(meta.unplaced || [], null, 0))}</pre>
+    `;
+    document.getElementById('btn-save-gen-opts').addEventListener('click', () => {
+      pushUndo();
+      state.sequentialBlockSubjects = { ...state.sequentialBlockSubjects };
+      state.subjectRoomLinks = { ...state.subjectRoomLinks };
+      state.subjectRoomLinksByGrade = { ...(state.subjectRoomLinksByGrade || {}) };
+      GRADES.forEach(g => { state.subjectRoomLinksByGrade[g] = { ...(state.subjectRoomLinksByGrade[g] || {}) }; });
+      el.querySelectorAll('.auto-seq').forEach(cb => {
+        const sub = subjects[parseInt(cb.getAttribute('data-idx'), 10)];
+        if (!sub || cb.disabled) return;
+        state.sequentialBlockSubjects[sub] = cb.checked;
+      });
+      el.querySelectorAll('.auto-link').forEach(sel => {
+        const sub = subjects[parseInt(sel.getAttribute('data-idx'), 10)];
+        if (!sub) return;
+        state.subjectRoomLinks[sub] = sel.value;
+      });
+      el.querySelectorAll('.auto-link-grade').forEach(sel => {
+        const sub = subjects[parseInt(sel.getAttribute('data-idx'), 10)];
+        const grade = parseInt(sel.getAttribute('data-grade'), 10);
+        if (!sub || !grade) return;
+        if (!state.subjectRoomLinksByGrade[grade]) state.subjectRoomLinksByGrade[grade] = {};
+        state.subjectRoomLinksByGrade[grade][sub] = sel.value;
+      });
+      saveStateDebounced(state);
+      alert('자동생성 옵션을 저장했습니다.');
+      renderPanelAuto();
+    });
+    document.getElementById('btn-run-auto').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-run-auto');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '자동 생성 중...';
+      }
+      try {
+        await autoGenerateTimetable();
+        alert('자동 생성을 실행했습니다. 충돌 검사 탭을 확인하세요.');
+      } finally {
+        renderPanelAuto();
+      }
+    });
+    document.getElementById('btn-run-conflict').addEventListener('click', () => {
+      runConflictCheck();
+      saveStateDebounced(state);
+      alert('충돌 검사를 갱신했습니다.');
+    });
+  }
+
+  function renderTeacherTimetable(t) {
+    const teacherWeekly = listAllClassKeys(state).reduce((sum, ck) => {
+      DAYS.forEach(d => {
+        const g = parseClassKey(ck).grade;
+        slotsForGradeDay(state, g, d).forEach(s => {
+          const c = getCell(state, ck, d, s);
+          if (c && c.teacherId === t.id) sum++;
+        });
+      });
+      return sum;
+    }, 0);
+    const adjacentWeekly = DAYS.reduce((sum, d) => {
+      const slotNums = ['1','2','3','4','5','5A','5B','6']
+        .map(s => ({ s, ord: parseSlotOrd(s) }))
+        .filter(({ s }) => {
+          const hitCount = listAllClassKeys(state).filter(ck => {
+            const g = parseClassKey(ck).grade;
+            if (!slotsForGradeDay(state, g, d).includes(s)) return false;
+            const c = getCell(state, ck, d, s);
+            return c && c.teacherId === t.id;
+          }).length;
+          return hitCount > 0;
+        })
+        .sort((a, b) => a.ord - b.ord)
+        .map(x => x.ord);
+      let cnt = 0;
+      for (let i = 0; i < slotNums.length - 1; i++) {
+        if (slotNums[i + 1] - slotNums[i] === 1) cnt++;
+      }
+      return sum + cnt;
+    }, 0);
+    const head = `<tr><th>교시</th>${DAYS.map(d => `<th>${DAY_KO[d]}</th>`).join('')}</tr>`;
+    const slots = ['1','2','3','4','5','5A','5B','6'];
+    let body = '';
+    slots.forEach(s => {
+      body += '<tr><th>' + slotLabel(s) + '</th>';
+      DAYS.forEach(d => {
+        const hits = [];
+        listAllClassKeys(state).forEach(ck => {
+          const g = parseClassKey(ck).grade;
+          if (!slotsForGradeDay(state, g, d).includes(s)) return;
+          const c = getCell(state, ck, d, s);
+          if (c && c.teacherId === t.id) hits.push(esc(c.subject) + ' ' + ck);
+        });
+        const txt = hits.join('<br/>') || '';
+        body += `<td class="cell-lesson teacher-cell" data-tid="${esc(t.id)}" data-day="${d}" data-slot="${s}" draggable="true">${txt}</td>`;
+      });
+      body += '</tr>';
+    });
+    return `<h3>${esc(t.name)} <span class="hint">(주당 ${teacherWeekly}차시 · 연속 ${adjacentWeekly}회)</span></h3><div class="tt-wrap"><table class="timetable">${head}${body}</table></div>`;
+  }
+
+  function renderPanelViewTeacher() {
+    const el = document.getElementById('panel-view-teacher');
+    if (!state.teachers.length) {
+      el.innerHTML = '<h2>전담 시간표</h2><p>전담교사를 먼저 등록하세요.</p>';
+      return;
+    }
+    el.innerHTML = '<h2>전담교사별 시간표</h2>' + state.teachers.map(renderTeacherTimetable).join('');
+    bindTeacherCellInteractions(el);
+  }
+
+  function findTeacherLessonsAt(tid, day, slot) {
+    const rows = [];
+    listAllClassKeys(state).forEach(ck => {
+      const g = parseClassKey(ck).grade;
+      if (!slotsForGradeDay(state, g, day).includes(slot)) return;
+      const c = getCell(state, ck, day, slot);
+      if (c && c.teacherId === tid) rows.push({ ck, cell: c });
+    });
+    return rows;
+  }
+
+  function bindTeacherCellInteractions(container) {
+    let drag = null;
+    container.querySelectorAll('td.teacher-cell').forEach(td => {
+      td.addEventListener('dragstart', e => {
+        drag = { tid: td.dataset.tid, day: td.dataset.day, slot: td.dataset.slot };
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      td.addEventListener('dragover', e => { e.preventDefault(); });
+      td.addEventListener('drop', e => {
+        e.preventDefault();
+        if (!drag) return;
+        const tid = drag.tid;
+        const toDay = td.dataset.day, toSlot = td.dataset.slot;
+        if (!tid || tid !== td.dataset.tid) return;
+        const fromRows = findTeacherLessonsAt(tid, drag.day, drag.slot);
+        const toRows = findTeacherLessonsAt(tid, toDay, toSlot);
+        if (fromRows.length !== 1 || toRows.length > 1) {
+          alert('전담 시간표 이동은 각 칸에 1개 수업일 때만 가능합니다.');
+          drag = null;
+          return;
+        }
+        const from = fromRows[0];
+        const to = toRows[0] || null;
+        if (isLocked(state, from.ck, drag.day, drag.slot)) {
+          alert('고정된 칸은 이동할 수 없습니다.');
+          drag = null;
+          return;
+        }
+        if (to && isLocked(state, to.ck, toDay, toSlot)) {
+          alert('고정된 칸은 이동할 수 없습니다.');
+          drag = null;
+          return;
+        }
+        pushUndo();
+        removeLesson(state, from.ck, drag.day, drag.slot);
+        if (to) removeLesson(state, to.ck, toDay, toSlot);
+        setLesson(state, from.ck, toDay, toSlot, from.cell);
+        if (to) setLesson(state, to.ck, drag.day, drag.slot, to.cell);
+        syncDerivedFromLessons(state);
+        runConflictCheck();
+        saveStateDebounced(state);
+        renderAll();
+        drag = null;
+      });
+    });
+  }
+
+  function cellDisplayForClass(ck, d, s) {
+    const c = getCell(state, ck, d, s);
+    const parts = [];
+    if (c && c.subject) parts.push(esc(c.subject) + ' ' + esc((c.teacherName || '').slice(0, 4)));
+    state.rooms.forEach(r => {
+      const arr = (state.schedule.byRoom[r.id][d][s] || []).filter(x =>
+        (x.kind === 'class' && x.classKey === ck) || (x.kind === 'grade' && String(x.classKey).startsWith(String(parseClassKey(ck).grade))));
+      arr.forEach(a => parts.push(esc(r.name)));
+    });
+    return parts.join('<br/>') || '';
+  }
+
+  function subjClassForCell(ck, d, s) {
+    const c = getCell(state, ck, d, s);
+    if (c && c.subject) {
+      if (c.subject === '과학') return 'subj-science';
+      if (c.subject === '영어') return 'subj-english';
+      if (c.subject === '놀이') return 'subj-play';
+      return 'subj-other';
+    }
+    const extra = state.rooms.some(r => {
+      const arr = state.schedule.byRoom[r.id][d][s] || [];
+      return arr.some(x => x.kind === 'class' && x.classKey === ck);
+    });
+    if (extra) return 'subj-pe';
+    return 'subj-empty';
+  }
+
+  function renderPanelViewClass() {
+    const el = document.getElementById('panel-view-class');
+    const keys = listAllClassKeys(state);
+    if (!keys.length) {
+      el.innerHTML = '<h2>학급별 시간표</h2><p>학급 수를 설정하세요.</p>';
+      return;
+    }
+    el.innerHTML = '<h2>학급별 시간표</h2><div class="btn-row"><button type="button" class="btn" id="btn-undo-v">되돌리기</button><button type="button" class="btn" id="btn-redo-v">다시 실행</button><button type="button" class="btn btn-primary" id="btn-recheck">충돌 다시 검사</button></div>' +
+      keys.map(ck => {
+        const g = parseClassKey(ck).grade;
+        const slots = slotsForGrade(state, g);
+        const head = `<tr><th>교시</th>${DAYS.map(d => `<th>${DAY_KO[d]}</th>`).join('')}</tr>`;
+        let body = '';
+        slots.forEach(s => {
+          body += '<tr><th>' + slotLabel(s) + '</th>';
+          DAYS.forEach(d => {
+            if (!slotsForGradeDay(state, g, d).includes(s)) {
+              body += '<td class="subj-empty">—</td>';
+              return;
+            }
+            const k = cellKey(ck, d, s);
+            const cc = subjClassForCell(ck, d, s);
+            const cf = conflictClassForKey(k);
+            const lk = isLocked(state, ck, d, s) ? ' locked' : '';
+            body += `<td class="cell-lesson ${cc} ${cf}${lk}" data-ck="${esc(ck)}" data-day="${d}" data-slot="${s}" draggable="true">${cellDisplayForClass(ck,d,s) || ''}</td>`;
+          });
+          body += '</tr>';
+        });
+        return `<h3>${esc(ck)}</h3><div class="tt-wrap"><table class="timetable">${head}${body}</table></div>`;
+      }).join('');
+    bindCellInteractions(el);
+    document.getElementById('btn-undo-v').addEventListener('click', undo);
+    document.getElementById('btn-redo-v').addEventListener('click', redo);
+    document.getElementById('btn-recheck').addEventListener('click', () => { runConflictCheck(); saveStateDebounced(state); renderActivePanel(); });
+  }
+
+  function renderPanelViewRoom() {
+    const el = document.getElementById('panel-view-room');
+    el.innerHTML = '<h2>특별실별 시간표</h2>' + state.rooms.map(r => {
+      const head = `<tr><th>교시</th>${DAYS.map(d => `<th>${DAY_KO[d]}</th>`).join('')}</tr>`;
+      const slots = ['1','2','3','4','5','5A','5B','6'];
+      let body = '';
+      slots.forEach(s => {
+        body += '<tr><th>' + slotLabel(s) + '</th>';
+        DAYS.forEach(d => {
+          const arr = (state.schedule.byRoom[r.id][d][s] || []);
+          const txt = arr.map(a => esc(a.label || a.classKey)).join('<br/>');
+          body += '<td>' + txt + '</td>';
+        });
+        body += '</tr>';
+      });
+      return `<h3>${esc(r.name)}</h3><div class="tt-wrap"><table class="timetable">${head}${body}</table></div>`;
+    }).join('');
+  }
+
+  function renderPanelConflicts() {
+    runConflictCheck();
+    const el = document.getElementById('panel-conflicts');
+    const errs = state.conflicts.errors || [];
+    const warns = state.conflicts.warnings || [];
+    el.innerHTML = `
+      <h2>충돌 검사</h2>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="cf-recheck">전체 다시 검사</button>
+      </div>
+      <div class="flex">
+        <div class="grow">
+          <h3>오류 (${errs.length})</h3>
+          <ul class="msg-list" id="list-err">${errs.map(e => `<li data-key="${esc(e.key)}"><span class="tag tag-err">오류</span>${esc(e.message)} <small>${esc(e.key)}</small></li>`).join('')}</ul>
+        </div>
+        <div class="grow">
+          <h3>경고 (${warns.length})</h3>
+          <ul class="msg-list" id="list-warn">${warns.map(e => `<li data-key="${esc(e.key)}"><span class="tag tag-warn">경고</span>${esc(e.message)} <small>${esc(e.key)}</small></li>`).join('')}</ul>
+        </div>
+      </div>
+      <p class="hint">목록 항목을 클릭하면 학급별 시간표 탭으로 이동해 해당 칸을 강조합니다 (키 형식: 학급|요일|교시).</p>
+    `;
+    document.getElementById('cf-recheck').addEventListener('click', () => { runConflictCheck(); saveStateDebounced(state); renderPanelConflicts(); });
+    el.querySelectorAll('#list-err li, #list-warn li').forEach(li => {
+      li.addEventListener('click', () => {
+        const key = li.dataset.key || '';
+        state.ui.highlightKey = key;
+        const parts = key.split('|');
+        if (parts.length >= 3) {
+          setTab('view-class');
+          setTimeout(() => {
+            const td = document.querySelector(`td.cell-lesson[data-ck="${parts[0]}"][data-day="${parts[1]}"][data-slot="${parts[2]}"]`);
+            if (td) { td.style.boxShadow = '0 0 0 3px #165dff'; td.scrollIntoView({ block:'center', behavior:'smooth' }); setTimeout(()=>{ td.style.boxShadow=''; }, 2000); }
+          }, 100);
+        }
+      });
+    });
+  }
+
+  function renderPanelIO() {
+    const el = document.getElementById('panel-io');
+    el.innerHTML = `
+      <h2>저장 / 불러오기</h2>
+      <p class="hint">모든 데이터는 이 PC 브라우저 localStorage에 자동 저장됩니다.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="io-export-json">JSON 내보내기</button>
+        <label class="btn">JSON 불러오기<input type="file" id="io-import-json" accept="application/json" style="display:none"/></label>
+        <button class="btn" type="button" id="io-csv-class">CSV 학급별</button>
+        <button class="btn" type="button" id="io-csv-teacher">CSV 교사별</button>
+        <button class="btn" type="button" id="io-csv-room">CSV 특별실</button>
+        <button class="btn btn-danger" type="button" id="io-reset">전체 초기화</button>
+      </div>
+      <h3>인쇄</h3>
+      <p>상단 인쇄 버튼 또는 Ctrl+P — 인쇄 시 탭은 숨깁니다.</p>
+    `;
+    document.getElementById('io-export-json').addEventListener('click', exportJson);
+    document.getElementById('io-import-json').addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          pushUndo();
+          state = migrateState(JSON.parse(r.result));
+          ensureScheduleBuckets(state);
+          saveStateNow(state);
+          renderAll();
+          alert('불러오기 완료');
+        } catch (x) { alert('파일 오류: ' + x.message); }
+      };
+      r.readAsText(f);
+    });
+    document.getElementById('io-csv-class').addEventListener('click', () => exportCsv('class'));
+    document.getElementById('io-csv-teacher').addEventListener('click', () => exportCsv('teacher'));
+    document.getElementById('io-csv-room').addEventListener('click', () => exportCsv('room'));
+    document.getElementById('io-reset').addEventListener('click', () => {
+      if (!confirm('모든 데이터를 초기화할까요?')) return;
+      pushUndo();
+      state = createDefaultState();
+      saveStateNow(state);
+      renderAll();
+    });
+  }
+
+  function exportJson() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'timetable-data.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function exportCsv(mode) {
+    const BOM = '\uFEFF';
+    let csv = BOM;
+    if (mode === 'class') {
+      csv += '학급,요일,교시,내용\n';
+      listAllClassKeys(state).forEach(ck => {
+        const g = parseClassKey(ck).grade;
+        DAYS.forEach(d => {
+          slotsForGradeDay(state, g, d).forEach(s => {
+            const div = (cellDisplayForClass(ck, d, s) || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            csv += `"${ck}","${DAY_KO[d]}","${slotLabel(s)}","${div.replace(/"/g,'""')}"\n`;
+          });
+        });
+      });
+    } else if (mode === 'teacher') {
+      csv += '교사,요일,교시,내용\n';
+      state.teachers.forEach(t => {
+        DAYS.forEach(d => {
+          ['1','2','3','4','5','5A','5B','6'].forEach(s => {
+            const hits = [];
+            listAllClassKeys(state).forEach(ck => {
+              const g = parseClassKey(ck).grade;
+              if (!slotsForGradeDay(state, g, d).includes(s)) return;
+              const c = getCell(state, ck, d, s);
+              if (c && c.teacherId === t.id) hits.push(c.subject + ' ' + ck);
+            });
+            if (hits.length) csv += `"${t.name}","${DAY_KO[d]}","${slotLabel(s)}","${hits.join('; ')}"\n`;
+          });
+        });
+      });
+    } else {
+      csv += '특별실,요일,교시,내용\n';
+      state.rooms.forEach(r => {
+        DAYS.forEach(d => {
+          ['1','2','3','4','5','5A','5B','6'].forEach(s => {
+            const arr = (state.schedule.byRoom[r.id][d][s] || []);
+            if (arr.length) csv += `"${r.name}","${DAY_KO[d]}","${slotLabel(s)}","${arr.map(a=>a.label||a.classKey).join('; ')}"\n`;
+          });
+        });
+      });
+    }
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'timetable-' + mode + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function bindCellInteractions(container) {
+    let drag = null;
+    container.querySelectorAll('td.cell-lesson').forEach(td => {
+      td.addEventListener('click', () => openCellEditor(td));
+      td.addEventListener('dragstart', e => {
+        drag = { ck: td.dataset.ck, day: td.dataset.day, slot: td.dataset.slot };
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      td.addEventListener('dragover', e => { e.preventDefault(); });
+      td.addEventListener('drop', e => {
+        e.preventDefault();
+        if (!drag) return;
+        const target = td;
+        if (isLocked(state, drag.ck, drag.day, drag.slot) || isLocked(state, target.dataset.ck, target.dataset.day, target.dataset.slot)) return;
+        pushUndo();
+        const from = getCell(state, drag.ck, drag.day, drag.slot);
+        const to = getCell(state, target.dataset.ck, target.dataset.day, target.dataset.slot);
+        if (from) {
+          removeLesson(state, drag.ck, drag.day, drag.slot);
+          if (to) removeLesson(state, target.dataset.ck, target.dataset.day, target.dataset.slot);
+          setLesson(state, target.dataset.ck, target.dataset.day, target.dataset.slot, from);
+          if (to) setLesson(state, drag.ck, drag.day, drag.slot, to);
+          else delete state.schedule.byClass[drag.ck][drag.day][drag.slot];
+        }
+        syncDerivedFromLessons(state);
+        runConflictCheck();
+        saveStateDebounced(state);
+        renderActivePanel();
+        drag = null;
+      });
+    });
+  }
+
+  function openCellEditor(td) {
+    const ck = td.dataset.ck, day = td.dataset.day, slot = td.dataset.slot;
+    const cur = getCell(state, ck, day, slot);
+    const teacherOpts = state.teachers.map(t => `<option value="${t.id}" ${cur && cur.teacherId===t.id?'selected':''}>${esc(t.name)}</option>`).join('');
+    const subjOpts = SUBJECT_ORDER.map(s => `<option value="${s}" ${cur && cur.subject===s?'selected':''}>${s}</option>`).join('') +
+      `<option value="기타" ${cur && cur.subject && SUBJECT_ORDER.indexOf(cur.subject)<0?'selected':''}>기타</option>`;
+    const lk0 = isLocked(state, ck, day, slot);
+    openModal('셀 편집', `
+      <p><strong>${esc(ck)}</strong> ${DAY_KO[day]} ${slotLabel(slot)}</p>
+      <label>과목 <select id="ed-subj">${subjOpts}</select></label><br/>
+      <label>교사 <select id="ed-teach">${teacherOpts}</select></label><br/>
+      <label><input type="checkbox" id="ed-lock" ${lk0?'checked':''}/> 고정(자동생성 시 보호)</label>
+      <div class="btn-row">
+        <button type="button" class="btn btn-danger" id="ed-del">셀 비우기</button>
+      </div>
+    `, () => {
+      pushUndo();
+      const subj = document.getElementById('ed-subj').value;
+      const tid = document.getElementById('ed-teach').value;
+      const tch = teacherById(tid);
+      setLesson(state, ck, day, slot, { subject: subj, teacherId: tid, teacherName: tch ? tch.name : '', locked: false });
+      lockCell(state, ck, day, slot, document.getElementById('ed-lock').checked);
+      syncDerivedFromLessons(state);
+      runConflictCheck();
+      saveStateDebounced(state);
+      renderActivePanel();
+    });
+    setTimeout(() => {
+      const delBtn = document.getElementById('ed-del');
+      if (delBtn) delBtn.onclick = () => {
+        pushUndo();
+        removeLesson(state, ck, day, slot);
+        lockCell(state, ck, day, slot, false);
+        syncDerivedFromLessons(state);
+        runConflictCheck();
+        saveStateDebounced(state);
+        closeModal();
+        renderActivePanel();
+      };
+    }, 0);
+  }
+
+  /* =============================================================================
+     참조 보기 패널
+     ============================================================================= */
+  function getRefViewHTML(viewId) {
+    if (viewId === 'teacher') {
+      if (!state.teachers.length) return '<p style="color:#888">전담교사를 먼저 등록하세요.</p>';
+      return '<h3 style="margin:4px 0 8px;font-size:12px">전담 시간표</h3>' + state.teachers.map(renderTeacherTimetable).join('');
+    }
+    if (viewId === 'class') {
+      const keys = listAllClassKeys(state);
+      if (!keys.length) return '<p style="color:#888">학급 수를 설정하세요.</p>';
+      return '<h3 style="margin:4px 0 8px;font-size:12px">학급별 시간표</h3>' + keys.map(ck => {
+        const g = parseClassKey(ck).grade;
+        const slots = slotsForGrade(state, g);
+        const head = `<tr><th>교시</th>${DAYS.map(d => `<th>${DAY_KO[d]}</th>`).join('')}</tr>`;
+        let body = '';
+        slots.forEach(s => {
+          body += '<tr><th>' + slotLabel(s) + '</th>';
+          DAYS.forEach(d => {
+            if (!slotsForGradeDay(state, g, d).includes(s)) { body += '<td>—</td>'; return; }
+            body += `<td class="${subjClassForCell(ck, d, s)}">${cellDisplayForClass(ck, d, s) || ''}</td>`;
+          });
+          body += '</tr>';
+        });
+        return `<h4 style="margin:8px 0 2px;font-size:11px">${esc(ck)}</h4><div class="tt-wrap"><table class="timetable">${head}${body}</table></div>`;
+      }).join('');
+    }
+    if (viewId === 'room') {
+      if (!state.rooms.length) return '<p style="color:#888">특별실을 먼저 등록하세요.</p>';
+      return '<h3 style="margin:4px 0 8px;font-size:12px">특별실 시간표</h3>' + state.rooms.map(r => {
+        const head = `<tr><th>교시</th>${DAYS.map(d => `<th>${DAY_KO[d]}</th>`).join('')}</tr>`;
+        const slots = ['1','2','3','4','5','5A','5B','6'];
+        let body = '';
+        slots.forEach(s => {
+          body += '<tr><th>' + slotLabel(s) + '</th>';
+          DAYS.forEach(d => {
+            const arr = (state.schedule.byRoom[r.id][d][s] || []);
+            body += '<td>' + arr.map(a => esc(a.label || a.classKey)).join('<br/>') + '</td>';
+          });
+          body += '</tr>';
+        });
+        return `<h4 style="margin:8px 0 2px;font-size:11px">${esc(r.name)}</h4><div class="tt-wrap"><table class="timetable">${head}${body}</table></div>`;
+      }).join('');
+    }
+    return '';
+  }
+
+  function renderRefPanel() {
+    const body = document.getElementById('ref-panel-body');
+    const sel = document.getElementById('ref-panel-select');
+    if (!body || !sel) return;
+    body.innerHTML = getRefViewHTML(sel.value);
+  }
+
+  function toggleRefPanel() {
+    const panel = document.getElementById('ref-panel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) renderRefPanel();
+  }
+
+  window.__TT__ = { state: () => state, renderAll, setTab, runConflictCheck, autoGenerateTimetable };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    ensureScheduleBuckets(state);
+    renderAll();
+
+    document.getElementById('btn-ref-toggle').addEventListener('click', toggleRefPanel);
+    document.getElementById('ref-panel-close').addEventListener('click', toggleRefPanel);
+    document.getElementById('ref-panel-select').addEventListener('change', renderRefPanel);
+  });
+  </script>
+</body>
+</html>
