@@ -52,6 +52,9 @@
     table.timetable th { background: #f2f3f5; }
     td.cell-lesson { cursor: pointer; user-select: none; }
     td.cell-lesson[draggable="true"] { cursor: grab; }
+    td.cell-room-entry { cursor: pointer; user-select: none; }
+    td.cell-room-entry[draggable="true"] { cursor: grab; }
+    td.cell-room-entry.drag-over { outline: 2px dashed var(--primary); outline-offset: -2px; }
     td.conflict-err { outline: 2px solid var(--err); outline-offset: -2px; }
     td.conflict-warn { outline: 2px solid var(--warn); outline-offset: -2px; }
     td.locked::after { content: ''; position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23656c78'%3E%3Cpath d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'/%3E%3C/svg%3E") center/contain no-repeat; }
@@ -87,8 +90,22 @@
     #ref-panel-body table.timetable { min-width: 0; font-size: 10px; }
     #ref-panel-body table.timetable th, #ref-panel-body table.timetable td { min-width: 44px; padding: 2px 3px; height: 26px; }
     #btn-ref-toggle { position: fixed; right: 0; top: 50%; transform: translateY(-50%); z-index: 79; background: var(--primary); color: #fff; border: none; border-radius: 6px 0 0 6px; padding: 10px 6px; cursor: pointer; font-size: 12px; writing-mode: vertical-rl; letter-spacing: 1px; }
+    details.adv-settings { margin: 12px 0; border: 1px solid var(--border); border-radius: 6px; background: #f9fafb; }
+    details.adv-settings summary { padding: 10px 12px; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--muted); user-select: none; }
+    details.adv-settings summary:hover { color: var(--primary); }
+    details.adv-settings[open] summary { color: var(--primary); border-bottom: 1px solid var(--border); }
+    details.adv-settings > div { padding: 12px; }
+    #wizard-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:200; align-items:center; justify-content:center; padding:16px; }
+    #wizard-overlay.open { display:flex; }
+    .wizard-box { background:#fff; border-radius:12px; max-width:600px; width:100%; padding:24px; max-height:90vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,.2); }
+    .wizard-box h2 { margin:0 0 4px; font-size:20px; }
+    .wizard-box .wizard-subtitle { color:var(--muted); margin:0 0 16px; font-size:13px; }
+    .wizard-steps { display:flex; gap:8px; margin-bottom:20px; }
+    .wizard-steps .step { flex:1; text-align:center; padding:8px; border-radius:6px; font-size:12px; background:#e5e6eb; color:var(--muted); }
+    .wizard-steps .step.active { background:var(--primary); color:#fff; font-weight:600; }
+    .wizard-steps .step.done { background:#d6f3df; color:#00b578; }
     @media print {
-      .tabs, .app-header button, .btn-row button, #modal-overlay, #ref-panel, #btn-ref-toggle { display: none !important; }
+      .tabs, .app-header button, .btn-row button, #modal-overlay, #ref-panel, #btn-ref-toggle, #wizard-overlay { display: none !important; }
       body { background: #fff; }
       section.panel { display: block !important; page-break-inside: avoid; border: none; }
       table.timetable { font-size: 11px; }
@@ -130,6 +147,10 @@
         <button class="btn" type="button" id="modal-cancel">취소</button>
       </div>
     </div>
+  </div>
+
+  <div id="wizard-overlay">
+    <div class="wizard-box" id="wizard-box"></div>
   </div>
 
   <script>
@@ -478,50 +499,55 @@
         ${GRADES.map(g => `<tr><td>${g}학년</td><td><input type="number" min="0" max="30" id="cc-${g}" value="${state.classCounts[g]||0}" /></td></tr>`).join('')}
       </tbody></table>
       <p class="hint">유치원은 본 버전에서 제외합니다.</p>
-      <h3>학년별 요일별 최대 교시</h3>
-      <div class="hint">각 학년의 월~금 최대 교시를 입력합니다 (정수).</div>
-      ${GRADES.map(g => `
-        <div style="margin:8px 0"><strong>${g}학년</strong>
-        ${DAYS.map(d => `<label>${DAY_KO[d]} <input type="number" min="1" max="8" id="pd-${g}-${d}" value="${state.periods[g][d]}" style="width:48px"/></label>`).join('')}
-        </div>
-      `).join('')}
-      <h3>점심시간 운영 방식</h3>
-      <select id="lunch-mode">
-        <option value="unified" ${state.lunch.mode==='unified'?'selected':''}>전 학년 동일 점심</option>
-        <option value="two" ${state.lunch.mode==='two'?'selected':''}>2타임 점심 (5교시 5A/5B 분리)</option>
-        <option value="three" ${state.lunch.mode==='three'?'selected':''}>3타임 점심 (5교시 5A/5B 분리)</option>
-        <option value="custom" ${state.lunch.mode==='custom'?'selected':''}>사용자 지정 (학년별 5A/5B)</option>
-      </select>
-      <div id="lunch-track-box" style="margin-top:8px">
-        <div class="hint">5교시 분리 시 각 학년이 5A(저학년 권) 또는 5B(고학년 권) 중 어디에 속하는지 선택합니다.</div>
-        ${GRADES.map(g => `
-          <label>${g}학년
-            <select id="track-${g}" ${state.lunch.mode==='unified'?'disabled':''}>
-              <option value="A" ${(state.lunch.grade5Track[String(g)]||'A')==='A'?'selected':''}>5A</option>
-              <option value="B" ${(state.lunch.grade5Track[String(g)]||'A')==='B'?'selected':''}>5B</option>
-            </select>
-          </label>
-        `).join('')}
-      </div>
-      <h3>학년 공통 금지 (전담 배정)</h3>
-      <label><input type="checkbox" id="gb-12-6" ${(state.gradeBans||[]).some(b=>b.grade===1&&b.period==='6')?'checked':''}/> 1·2학년 6교시 전담 배정 금지</label>
-      <h3>학년별 전담 목표 시수(학급당 주당)</h3>
-      <div class="hint">예: 3학년 과학 2시간, 영어 2시간. 전담 배정 누락 검사와 자동 분배 기준으로 사용됩니다.</div>
-      <div class="tt-wrap">
-        <table class="timetable">
-          <thead>
-            <tr><th>학년</th>${SUBJECT_ORDER.map(s => `<th>${s}</th>`).join('')}</tr>
-          </thead>
-          <tbody>
+      <details class="adv-settings">
+        <summary>▶ 고급 설정 (교시, 점심, 금지, 목표시수)</summary>
+        <div>
+          <h3>학년별 요일별 최대 교시</h3>
+          <div class="hint">각 학년의 월~금 최대 교시를 입력합니다 (정수).</div>
+          ${GRADES.map(g => `
+            <div style="margin:8px 0"><strong>${g}학년</strong>
+            ${DAYS.map(d => `<label>${DAY_KO[d]} <input type="number" min="1" max="8" id="pd-${g}-${d}" value="${state.periods[g][d]}" style="width:48px"/></label>`).join('')}
+            </div>
+          `).join('')}
+          <h3>점심시간 운영 방식</h3>
+          <select id="lunch-mode">
+            <option value="unified" ${state.lunch.mode==='unified'?'selected':''}>전 학년 동일 점심</option>
+            <option value="two" ${state.lunch.mode==='two'?'selected':''}>2타임 점심 (5교시 5A/5B 분리)</option>
+            <option value="three" ${state.lunch.mode==='three'?'selected':''}>3타임 점심 (5교시 5A/5B 분리)</option>
+            <option value="custom" ${state.lunch.mode==='custom'?'selected':''}>사용자 지정 (학년별 5A/5B)</option>
+          </select>
+          <div id="lunch-track-box" style="margin-top:8px">
+            <div class="hint">5교시 분리 시 각 학년이 5A(저학년 권) 또는 5B(고학년 권) 중 어디에 속하는지 선택합니다.</div>
             ${GRADES.map(g => `
-              <tr>
-                <th>${g}학년</th>
-                ${SUBJECT_ORDER.map(s => `<td><input type="number" min="0" max="8" id="gst-${g}-${s}" value="${((state.gradeSubjectTargets||{})[g]||{})[s] ?? 0}" style="width:50px"/></td>`).join('')}
-              </tr>
+              <label>${g}학년
+                <select id="track-${g}" ${state.lunch.mode==='unified'?'disabled':''}>
+                  <option value="A" ${(state.lunch.grade5Track[String(g)]||'A')==='A'?'selected':''}>5A</option>
+                  <option value="B" ${(state.lunch.grade5Track[String(g)]||'A')==='B'?'selected':''}>5B</option>
+                </select>
+              </label>
             `).join('')}
-          </tbody>
-        </table>
-      </div>
+          </div>
+          <h3>학년 공통 금지 (전담 배정)</h3>
+          <label><input type="checkbox" id="gb-12-6" ${(state.gradeBans||[]).some(b=>b.grade===1&&b.period==='6')?'checked':''}/> 1·2학년 6교시 전담 배정 금지</label>
+          <h3>학년별 전담 목표 시수(학급당 주당)</h3>
+          <div class="hint">예: 3학년 과학 2시간, 영어 2시간. 전담 배정 누락 검사와 자동 분배 기준으로 사용됩니다.</div>
+          <div class="tt-wrap">
+            <table class="timetable">
+              <thead>
+                <tr><th>학년</th>${SUBJECT_ORDER.map(s => `<th>${s}</th>`).join('')}</tr>
+              </thead>
+              <tbody>
+                ${GRADES.map(g => `
+                  <tr>
+                    <th>${g}학년</th>
+                    ${SUBJECT_ORDER.map(s => `<td><input type="number" min="0" max="8" id="gst-${g}-${s}" value="${((state.gradeSubjectTargets||{})[g]||{})[s] ?? 0}" style="width:50px"/></td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
       <div class="btn-row">
         <button class="btn btn-primary" type="button" id="btn-basic-apply">설정 반영</button>
       </div>
@@ -716,12 +742,17 @@
         <h3>담당 과목</h3>
         <table class="form-grid"><tbody id="sub-tbody-${idx}">${subs}</tbody></table>
         <button class="btn" type="button" data-add-sub="${idx}">과목 추가</button>
-        <h3>고정 배정</h3>
-        <table class="form-grid"><tbody id="fix-tbody-${idx}">${fixed}</tbody></table>
-        <button class="btn" type="button" data-add-fix="${idx}">고정 추가</button>
-        <h3>금지 시간 (교사)</h3>
-        <table class="form-grid"><tbody id="ban-tbody-${idx}">${banned}</tbody></table>
-        <button class="btn" type="button" data-add-ban="${idx}">금지 추가</button>
+        <details class="adv-settings">
+          <summary>▶ 고정 배정/금지 시간 (고급)</summary>
+          <div>
+            <h3>고정 배정</h3>
+            <table class="form-grid"><tbody id="fix-tbody-${idx}">${fixed}</tbody></table>
+            <button class="btn" type="button" data-add-fix="${idx}">고정 추가</button>
+            <h3>금지 시간 (교사)</h3>
+            <table class="form-grid"><tbody id="ban-tbody-${idx}">${banned}</tbody></table>
+            <button class="btn" type="button" data-add-ban="${idx}">금지 추가</button>
+          </div>
+        </details>
       </div>
     `;
   }
@@ -1159,29 +1190,31 @@
     const kindOptions = state.roomKindOptions || CORE_ROOM_KINDS.map(k => ({ key:k, label: ROOM_KIND_LABEL[k] || k }));
     el.innerHTML = `
       <h2>특별실 설정</h2>
-      <div style="border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;background:#f7f8fa">
-        <h3>특별실 종류 관리</h3>
-        <div class="btn-row">
-          <label>종류 코드 <input type="text" id="kind-key" placeholder="예: maker" style="width:120px"/></label>
-          <label>표시명 <input type="text" id="kind-label" placeholder="예: 메이커실" style="width:120px"/></label>
-          <button class="btn" type="button" id="add-kind-btn">종류 추가</button>
+      <details class="adv-settings">
+        <summary>▶ 특별실 종류 관리 (고급)</summary>
+        <div>
+          <div class="btn-row">
+            <label>종류 코드 <input type="text" id="kind-key" placeholder="예: maker" style="width:120px"/></label>
+            <label>표시명 <input type="text" id="kind-label" placeholder="예: 메이커실" style="width:120px"/></label>
+            <button class="btn" type="button" id="add-kind-btn">종류 추가</button>
+          </div>
+          <table style="width:100%;max-width:720px;border-collapse:collapse;font-size:13px;margin-top:8px;border:1px solid var(--border)">
+            <thead><tr style="background:#eef2ff"><th style="padding:6px;text-align:left">종류 코드</th><th style="padding:6px;text-align:left">표시명</th><th style="padding:6px">작업</th></tr></thead>
+            <tbody id="kind-tbody">
+              ${kindOptions.map(k => `
+                <tr data-kind="${esc(k.key)}">
+                  <td style="padding:6px"><code>${esc(k.key)}</code></td>
+                  <td style="padding:6px"><input type="text" class="kind-label-inp" value="${esc(k.label)}" style="width:min(100%,220px)"/></td>
+                  <td style="padding:6px;white-space:nowrap">
+                    <button type="button" class="btn kind-save-btn">이름 저장</button>
+                    <button type="button" class="btn btn-danger kind-del-btn">삭제</button>
+                  </td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+          <p class="hint">기본 종류도 표시명을 바꿀 수 있습니다. 해당 종류를 쓰는 특별실이 있으면 종류 삭제는 불가입니다.</p>
         </div>
-        <table style="width:100%;max-width:720px;border-collapse:collapse;font-size:13px;margin-top:8px;border:1px solid var(--border)">
-          <thead><tr style="background:#eef2ff"><th style="padding:6px;text-align:left">종류 코드</th><th style="padding:6px;text-align:left">표시명</th><th style="padding:6px">작업</th></tr></thead>
-          <tbody id="kind-tbody">
-            ${kindOptions.map(k => `
-              <tr data-kind="${esc(k.key)}">
-                <td style="padding:6px"><code>${esc(k.key)}</code></td>
-                <td style="padding:6px"><input type="text" class="kind-label-inp" value="${esc(k.label)}" style="width:min(100%,220px)"/></td>
-                <td style="padding:6px;white-space:nowrap">
-                  <button type="button" class="btn kind-save-btn">이름 저장</button>
-                  <button type="button" class="btn btn-danger kind-del-btn">삭제</button>
-                </td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-        <p class="hint">기본 종류도 표시명을 바꿀 수 있습니다. 해당 종류를 쓰는 특별실이 있으면 종류 삭제는 불가입니다.</p>
-      </div>
+      </details>
       <div class="btn-row"><button class="btn btn-primary" type="button" id="add-room">특별실 추가</button></div>
       <div id="room-list"></div>
     `;
@@ -1252,17 +1285,22 @@
             </select>
           </label>
           <label>동시 수용 학급 <input type="number" class="rc" data-ri="${i}" min="1" max="10" value="${r.capacity}" style="width:50px"/></label>
-          <label>주당 배정 횟수(단위당) <input type="number" class="rw" data-ri="${i}" min="0" max="10" value="${r.weeklyTarget || 1}" style="width:60px"/></label>
-          <label>우선순위 <input type="number" class="rp" data-ri="${i}" value="${r.priority}" style="width:60px"/></label>
           <button class="btn btn-danger btn-rm-del" data-ri="${i}" type="button">삭제</button>
         </div>
-        <div>사용 가능 학년:
-          ${GRADES.map(g => `<label><input type="checkbox" class="rg" data-ri="${i}" value="${g}" ${r.allowedGrades.includes(g)?'checked':''}/>${g}</label>`).join('')}
-        </div>
-        <label><input type="checkbox" class="rbc" data-ri="${i}" ${r.byClass?'checked':''}/> 학급 단위 배정</label>
-        <label><input type="checkbox" class="rbg" data-ri="${i}" ${r.byGrade?'checked':''}/> 학년 단위 배정</label>
-        <label><input type="checkbox" class="ras" data-ri="${i}" ${r.afterSchoolOk?'checked':''}/> 방과후 사용 가능</label>
-        <div class="hint">금지 요일·교시는 JSON 편집 또는 이후 확장에서 추가 가능합니다. (현재 bannedSlots 배열)</div>
+        <details class="adv-settings">
+          <summary>▶ 고급 설정 (우선순위, 학년 허용, 방과후)</summary>
+          <div>
+            <label>주당 배정 횟수(단위당) <input type="number" class="rw" data-ri="${i}" min="0" max="10" value="${r.weeklyTarget || 1}" style="width:60px"/></label>
+            <label>우선순위 <input type="number" class="rp" data-ri="${i}" value="${r.priority}" style="width:60px"/></label>
+            <div style="margin:8px 0">사용 가능 학년:
+              ${GRADES.map(g => `<label><input type="checkbox" class="rg" data-ri="${i}" value="${g}" ${r.allowedGrades.includes(g)?'checked':''}/>${g}</label>`).join('')}
+            </div>
+            <label><input type="checkbox" class="rbc" data-ri="${i}" ${r.byClass?'checked':''}/> 학급 단위 배정</label>
+            <label><input type="checkbox" class="rbg" data-ri="${i}" ${r.byGrade?'checked':''}/> 학년 단위 배정</label>
+            <label><input type="checkbox" class="ras" data-ri="${i}" ${r.afterSchoolOk?'checked':''}/> 방과후 사용 가능</label>
+            <div class="hint">금지 요일·교시는 JSON 편집 또는 이후 확장에서 추가 가능합니다. (현재 bannedSlots 배열)</div>
+          </div>
+        </details>
       </div>
     `).join('');
     state.rooms.forEach((r,i) => {
@@ -1855,13 +1893,13 @@
         }
       }
     }
-    setGenProgress('교사 목표시수 우선 배정 중... (1/4)');
+    setGenProgress('교사 목표시수 우선 배정 중... (1/5)');
     await new Promise(r => setTimeout(r, 0));
     runTeacherTargetFirstPass();
-    setGenProgress('전체 과목 배정 중... (2/4)');
+    setGenProgress('전체 과목 배정 중... (2/5)');
     await new Promise(r => setTimeout(r, 0));
     runOnce();
-    setGenProgress('미배정 보완 중... (3/4)');
+    setGenProgress('미배정 보완 중... (3/5)');
     await new Promise(r => setTimeout(r, 0));
     for (let pass = 0; pass < 4; pass++) {
       if (Date.now() - start > TIME_LIMIT_MS || tries > MAX_TRIES) break;
@@ -1893,11 +1931,18 @@
         }
       }
     });
-    setGenProgress('특별실 배정 중... (4/4)');
+    setGenProgress('특별실 배정 중... (4/5)');
     await new Promise(r => setTimeout(r, 0));
     syncDerivedFromLessons(state);
     recommendSpecialRooms();
     runConflictCheck();
+
+    // 5단계: 충돌 자동 해결 루프
+    setGenProgress('충돌 자동 해결 중... (5/5)');
+    await new Promise(r => setTimeout(r, 0));
+    autoRepairConflicts(state, 3);
+    runConflictCheck();
+
     state.generationMeta = {
       message: '자동 생성 완료 (추천안). 미배정이 있으면 수동으로 배치하세요.',
       unplaced,
@@ -2300,6 +2345,109 @@
   }
 
   /* =============================================================================
+     충돌 자동 해결
+     ============================================================================= */
+  /**
+   * 단일 충돌 항목을 자동 해결 시도.
+   * @returns {boolean} 해결에 성공하면 true
+   */
+  function autoRepairSingleConflict(st, code, key) {
+    const parts = key.split('|');
+
+    if (code === 'DUP_TEACHER') {
+      // 키: classKey|day|slot — 해당 교시에 같은 교사가 여러 학급에 배정됨
+      const [ck, day, slot] = parts;
+      const cell = getCell(st, ck, day, slot);
+      if (!cell || !cell.teacherId) return false;
+      const tid = cell.teacherId;
+      // 해당 교시에 같은 교사를 쓰는 모든 학급 찾기
+      const dups = [];
+      listAllClassKeys(st).forEach(oCk => {
+        const oc = getCell(st, oCk, day, slot);
+        if (oc && oc.teacherId === tid) dups.push({ ck: oCk, cell: oc });
+      });
+      if (dups.length <= 1) return false;
+      // 첫 번째만 유지, 나머지 제거 후 재배치
+      let fixed = false;
+      for (let i = 1; i < dups.length; i++) {
+        const d = dups[i];
+        if (isLocked(st, d.ck, day, slot)) continue;
+        removeLesson(st, d.ck, day, slot);
+        const ok = tryPlaceSingle(st, d.cell.teacherId, d.ck, d.cell.subject, false);
+        fixed = true;
+      }
+      return fixed;
+    }
+
+    if (code === 'ROOM_CAP' || code === 'SCI_ROOM' || code === 'MULTI_CAP' || code === 'PC_CAP') {
+      // 키: roomId|day|slot — 특별실 수용 초과
+      const [roomId, day, slot] = parts;
+      const room = st.rooms.find(r => r.id === roomId);
+      if (!room) return false;
+      const cap = room.capacity || 1;
+      if (code === 'SCI_ROOM') {
+        // 과학실은 동시 1학급만 허용
+        const arr = (((st.schedule.byRoom || {})[roomId] || {})[day] || {})[slot] || [];
+        const classEntries = arr.filter(x => x.kind === 'class');
+        if (classEntries.length <= 1) return false;
+        const toRemove = classEntries.slice(1);
+        toRemove.forEach(entry => {
+          const idx = arr.indexOf(entry);
+          if (idx >= 0) arr.splice(idx, 1);
+        });
+        return true;
+      }
+      const arr = (((st.schedule.byRoom || {})[roomId] || {})[day] || {})[slot] || [];
+      if (arr.length <= cap) return false;
+      const excess = arr.splice(cap);
+      return excess.length > 0;
+    }
+
+    if (code === 'CLASS_MULTI_ROOM') {
+      // 키: classKey|day|slot — 한 교시에 여러 특별실 배정
+      const [ck, day, slot] = parts;
+      clearClassRoomAssignmentsAtSlot(st, ck, day, slot);
+      syncDerivedFromLessons(st);
+      return true;
+    }
+
+    if (code === 'CLASS_ROOM') {
+      // 키: classKey|day|slot — 전담과 다른 특별실 사용
+      const [ck, day, slot] = parts;
+      clearClassRoomAssignmentsAtSlot(st, ck, day, slot);
+      syncDerivedFromLessons(st);
+      return true;
+    }
+
+    // ROOM_WEEKLY_MISS, ENG_SAME_DAY 등은 단순 수리 불가
+    return false;
+  }
+
+  /**
+   * 전체 충돌을 최대 maxPasses 회 반복하며 자동 해결 시도.
+   * @returns {{ passed: number, fixedTotal: number, remaining: number }}
+   */
+  function autoRepairConflicts(st, maxPasses) {
+    let fixedTotal = 0;
+    let pass = 0;
+    for (pass = 0; pass < maxPasses; pass++) {
+      runConflictCheck();
+      const errs = (st.conflicts.errors || []).slice();
+      if (errs.length === 0) break;
+      let fixedThisPass = 0;
+      for (const e of errs) {
+        if (e.code === 'ROOM_WEEKLY_MISS') continue;
+        const ok = autoRepairSingleConflict(st, e.code, e.key);
+        if (ok) fixedThisPass++;
+      }
+      fixedTotal += fixedThisPass;
+      if (fixedThisPass === 0) break;
+    }
+    runConflictCheck();
+    return { passed: pass + 1, fixedTotal, remaining: (st.conflicts.errors || []).length };
+  }
+
+  /* =============================================================================
      자동 생성 패널 · 뷰 · 충돌 UI · 입출력 · 모달
      ============================================================================= */
   let modalAction = null;
@@ -2377,7 +2525,6 @@
       const maxH = maxHoursPerClassForSubject(sub);
       const seq = !!(state.sequentialBlockSubjects && state.sequentialBlockSubjects[sub]);
       const linkVal = (state.subjectRoomLinks && state.subjectRoomLinks[sub]) || 'none';
-      const byG = state.subjectRoomLinksByGrade || {};
       const canSeq = maxH >= 2;
       return `<tr>
         <td style="padding:6px"><strong>${esc(sub)}</strong></td>
@@ -2386,6 +2533,12 @@
           <label><input type="checkbox" class="auto-seq" data-idx="${idx}" ${seq ? 'checked' : ''} ${canSeq ? '' : 'disabled'} title="${canSeq ? '2시간 이상인 학급이 있을 때만 적용됩니다.' : '해당 과목은 학급당 1시간 이하만 배정됨'}"/> 연차시</label>
         </td>
         <td style="padding:6px">${linkSelect(sub, linkVal, idx)}</td>
+      </tr>`;
+    }).join('');
+    const gradeRows = subjects.map((sub, idx) => {
+      const byG = state.subjectRoomLinksByGrade || {};
+      return `<tr>
+        <td style="padding:6px"><strong>${esc(sub)}</strong></td>
         ${GRADES.map(g => {
           const gv = ((byG[g] || {})[sub] || 'none');
           return `<td style="padding:6px">${linkSelect(sub, gv, idx, g)}</td>`;
@@ -2404,10 +2557,21 @@
             <th style="padding:6px;text-align:right">총 시수</th>
             <th style="padding:6px;text-align:center">연차시(2연속)</th>
             <th style="padding:6px;text-align:left">공통 특별실</th>
-            ${GRADES.map(g => `<th style="padding:6px;text-align:left">${g}학년 특별실</th>`).join('')}
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
+        <details class="adv-settings">
+          <summary>▶ 학년별 특별실 연동 (고급)</summary>
+          <div>
+            <table style="width:100%;max-width:100%;border-collapse:collapse;font-size:13px;border:1px solid var(--border)">
+              <thead><tr style="background:#eef2ff">
+                <th style="padding:6px;text-align:left">과목</th>
+                ${GRADES.map(g => `<th style="padding:6px;text-align:left">${g}학년 특별실</th>`).join('')}
+              </tr></thead>
+              <tbody>${gradeRows}</tbody>
+            </table>
+          </div>
+        </details>
         <div class="btn-row" style="margin-top:8px">
           <button class="btn btn-primary" type="button" id="btn-save-gen-opts">이 설정 저장</button>
         </div>
@@ -2662,12 +2826,123 @@
         DAYS.forEach(d => {
           const arr = (state.schedule.byRoom[r.id][d][s] || []);
           const txt = arr.map(a => esc(a.label || a.classKey)).join('<br/>');
-          body += '<td>' + txt + '</td>';
+          const hasContent = arr.length > 0;
+          body += `<td class="cell-room-entry" data-rid="${esc(r.id)}" data-day="${d}" data-slot="${s}"${hasContent ? ' draggable="true"' : ''}>${txt}</td>`;
         });
         body += '</tr>';
       });
       return `<h3>${esc(r.name)}</h3><div class="tt-wrap"><table class="timetable">${head}${body}</table></div>`;
     }).join('');
+    bindRoomCellInteractions(el);
+  }
+
+  /** 특별실 시간표 셀 드래그앤드롭 + 클릭 모달 바인딩 */
+  function bindRoomCellInteractions(container) {
+    let drag = null;
+
+    container.querySelectorAll('td.cell-room-entry').forEach(td => {
+      // 클릭: 해당 슬롯 항목 관리 모달
+      td.addEventListener('click', () => openRoomCellModal(td.dataset.rid, td.dataset.day, td.dataset.slot));
+
+      td.addEventListener('dragstart', e => {
+        const arr = (((state.schedule.byRoom || {})[td.dataset.rid] || {})[td.dataset.day] || {})[td.dataset.slot] || [];
+        if (!arr.length) { e.preventDefault(); return; }
+        drag = { rid: td.dataset.rid, day: td.dataset.day, slot: td.dataset.slot };
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      td.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (!drag) return;
+        // 같은 특별실 내에서만 이동 허용
+        if (td.dataset.rid === drag.rid) {
+          td.classList.add('drag-over');
+        }
+      });
+
+      td.addEventListener('dragleave', () => {
+        td.classList.remove('drag-over');
+      });
+
+      td.addEventListener('drop', e => {
+        e.preventDefault();
+        td.classList.remove('drag-over');
+        if (!drag) return;
+
+        const tRid = td.dataset.rid, tDay = td.dataset.day, tSlot = td.dataset.slot;
+
+        if (tRid !== drag.rid) {
+          alert('다른 특별실로의 이동은 지원하지 않습니다.');
+          drag = null;
+          return;
+        }
+        if (tDay === drag.day && tSlot === drag.slot) { drag = null; return; }
+
+        pushUndo();
+        const roomSched = state.schedule.byRoom[drag.rid];
+        const srcArr = (roomSched[drag.day][drag.slot] || []).slice();
+        const dstArr = (roomSched[tDay][tSlot] || []).slice();
+
+        // 소스와 대상 교환
+        if (srcArr.length) roomSched[tDay][tSlot] = srcArr;
+        else delete roomSched[tDay][tSlot];
+
+        if (dstArr.length) roomSched[drag.day][drag.slot] = dstArr;
+        else delete roomSched[drag.day][drag.slot];
+
+        // 수용량 초과 확인
+        const room = state.rooms.find(r => r.id === tRid);
+        const cap = (room && room.capacity) || 1;
+        const newArr = roomSched[tDay][tSlot] || [];
+        if (newArr.length > cap) {
+          alert(`수용량 초과: ${room ? room.name : tRid} 최대 ${cap}학급`);
+        }
+
+        runConflictCheck();
+        saveStateDebounced(state);
+        renderPanelViewRoom();
+        drag = null;
+      });
+    });
+  }
+
+  /** 특별실 셀 클릭 시 항목 관리 모달 */
+  function openRoomCellModal(roomId, day, slot) {
+    const room = state.rooms.find(r => r.id === roomId);
+    const roomName = room ? room.name : roomId;
+    const arr = (((state.schedule.byRoom || {})[roomId] || {})[day] || {})[slot] || [];
+    if (!arr.length) return;
+
+    const listHtml = arr.map((entry, i) =>
+      `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee">
+        <span>${esc(entry.label || entry.classKey)} <small style="color:#888">(${entry.source || ''})</small></span>
+        <button class="btn btn-danger" style="padding:2px 10px;font-size:12px" data-rm-idx="${i}">삭제</button>
+      </div>`
+    ).join('');
+
+    openModal(`${esc(roomName)} — ${DAY_KO[day]} ${slotLabel(slot)}`,
+      `<p>이 교시에 배정된 항목 (${arr.length}개):</p>${listHtml}`,
+      () => { closeModal(); }
+    );
+
+    // 삭제 버튼 바인딩
+    setTimeout(() => {
+      document.querySelectorAll('button[data-rm-idx]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.rmIdx, 10);
+          pushUndo();
+          const curArr = (state.schedule.byRoom[roomId][day][slot] || []);
+          if (idx >= 0 && idx < curArr.length) {
+            curArr.splice(idx, 1);
+            if (!curArr.length) delete state.schedule.byRoom[roomId][day][slot];
+          }
+          runConflictCheck();
+          saveStateDebounced(state);
+          closeModal();
+          renderPanelViewRoom();
+        });
+      });
+    }, 0);
   }
 
   function renderPanelConflicts() {
@@ -2675,15 +2950,24 @@
     const el = document.getElementById('panel-conflicts');
     const errs = state.conflicts.errors || [];
     const warns = state.conflicts.warnings || [];
+    // 수리 불가 코드 목록
+    const skipCodes = new Set(['ROOM_WEEKLY_MISS', 'ENG_SAME_DAY']);
     el.innerHTML = `
       <h2>충돌 검사</h2>
       <div class="btn-row">
         <button class="btn btn-primary" type="button" id="cf-recheck">전체 다시 검사</button>
+        <button class="btn btn-primary" type="button" id="cf-autofix" style="background:#00b578;border-color:#00b578">충돌 자동 해결</button>
       </div>
       <div class="flex">
         <div class="grow">
           <h3>오류 (${errs.length})</h3>
-          <ul class="msg-list" id="list-err">${errs.map(e => `<li data-key="${esc(e.key)}"><span class="tag tag-err">오류</span>${esc(e.message)} <small>${esc(e.key)}</small></li>`).join('')}</ul>
+          <ul class="msg-list" id="list-err">${errs.map(e => {
+            const canFix = !skipCodes.has(e.code);
+            const fixBtn = canFix
+              ? ` <button class="btn" style="padding:2px 8px;font-size:11px;margin-left:4px" data-fixkey="${esc(e.key)}" data-fixcode="${esc(e.code)}">해결</button>`
+              : '';
+            return `<li data-key="${esc(e.key)}" data-code="${esc(e.code)}"><span class="tag tag-err">오류</span>${esc(e.message)}${fixBtn} <small>${esc(e.key)}</small></li>`;
+          }).join('')}</ul>
         </div>
         <div class="grow">
           <h3>경고 (${warns.length})</h3>
@@ -2693,8 +2977,38 @@
       <p class="hint">목록 항목을 클릭하면 학급별 시간표 탭으로 이동해 해당 칸을 강조합니다 (키 형식: 학급|요일|교시).</p>
     `;
     document.getElementById('cf-recheck').addEventListener('click', () => { runConflictCheck(); saveStateDebounced(state); renderPanelConflicts(); });
+
+    // 전체 자동 해결 버튼
+    document.getElementById('cf-autofix').addEventListener('click', () => {
+      pushUndo();
+      const result = autoRepairConflicts(state, 5);
+      syncDerivedFromLessons(state);
+      runConflictCheck();
+      saveStateDebounced(state);
+      renderPanelConflicts();
+      const rem = (state.conflicts.errors || []).length;
+      alert(rem === 0
+        ? '모든 충돌이 해결되었습니다!'
+        : `자동 해결 완료. 남은 오류: ${rem}건`);
+    });
+
+    // 개별 해결 버튼
+    el.querySelectorAll('button[data-fixkey]').forEach(btn => {
+      btn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        pushUndo();
+        autoRepairSingleConflict(state, btn.dataset.fixcode, btn.dataset.fixkey);
+        syncDerivedFromLessons(state);
+        runConflictCheck();
+        saveStateDebounced(state);
+        renderPanelConflicts();
+      });
+    });
+
+    // 목록 항목 클릭 시 해당 칸으로 이동
     el.querySelectorAll('#list-err li, #list-warn li').forEach(li => {
-      li.addEventListener('click', () => {
+      li.addEventListener('click', (ev) => {
+        if (ev.target.closest('button[data-fixkey]')) return;
         const key = li.dataset.key || '';
         state.ui.highlightKey = key;
         const parts = key.split('|');
@@ -2949,6 +3263,210 @@
 
   window.__TT__ = { state: () => state, renderAll, setTab, runConflictCheck, autoGenerateTimetable };
 
+  /* =============================================================================
+     빠른 시작 마법사
+     ============================================================================= */
+  const WIZARD_FLAG_KEY = 'tt_wizard_done';
+  let wizardData = { schoolName: '', year: '2026', classCounts: {1:4,2:4,3:4,4:4,5:4,6:4}, teacherCount: 6, teachers: [] };
+
+  function shouldShowWizard() {
+    if (localStorage.getItem(WIZARD_FLAG_KEY)) return false;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return true;
+    try {
+      const s = JSON.parse(raw);
+      return !s.teachers || s.teachers.length === 0;
+    } catch(e) { return true; }
+  }
+
+  function showWizard() {
+    wizardData = { schoolName: '', year: '2026', classCounts: {1:4,2:4,3:4,4:4,5:4,6:4}, teacherCount: 6, teachers: [] };
+    renderWizardStep(1);
+    document.getElementById('wizard-overlay').classList.add('open');
+  }
+
+  function closeWizard() {
+    document.getElementById('wizard-overlay').classList.remove('open');
+    localStorage.setItem(WIZARD_FLAG_KEY, '1');
+  }
+
+  function renderWizardStep(step) {
+    const box = document.getElementById('wizard-box');
+    const stepsHtml = `<div class="wizard-steps">
+      <div class="step ${step===1?'active':''} ${step>1?'done':''}">1. 학교 기본 정보</div>
+      <div class="step ${step===2?'active':''} ${step>2?'done':''}">2. 전담교사 설정</div>
+      <div class="step ${step===3?'active':''}">3. 바로 생성</div>
+    </div>`;
+
+    if (step === 1) {
+      box.innerHTML = `
+        <h2>빠른 시작 마법사</h2>
+        <p class="wizard-subtitle">처음 사용하시나요? 간단한 설정만으로 시간표를 바로 만들어 보세요.</p>
+        ${stepsHtml}
+        <label style="display:block;margin-bottom:10px">학교명<br/><input type="text" id="wiz-school" value="${esc(wizardData.schoolName)}" placeholder="예: OO초등학교" style="width:100%;margin-top:4px"/></label>
+        <label style="display:block;margin-bottom:10px">학년도<br/><input type="text" id="wiz-year" value="${esc(wizardData.year)}" style="width:100%;margin-top:4px"/></label>
+        <h3 style="margin-top:16px">학년별 학급 수</h3>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          ${GRADES.map(g => `<label>${g}학년 <input type="number" min="0" max="30" id="wiz-cc-${g}" value="${wizardData.classCounts[g]||4}" style="width:60px"/></label>`).join('')}
+        </div>
+        <div class="btn-row" style="margin-top:20px;justify-content:flex-end">
+          <button class="btn" type="button" onclick="closeWizard()">건너뛰기</button>
+          <button class="btn btn-primary" type="button" id="wiz-next1">다음 →</button>
+        </div>
+      `;
+      document.getElementById('wiz-next1').addEventListener('click', () => {
+        wizardData.schoolName = document.getElementById('wiz-school').value.trim();
+        wizardData.year = document.getElementById('wiz-year').value.trim() || '2026';
+        GRADES.forEach(g => { wizardData.classCounts[g] = parseInt(document.getElementById('wiz-cc-'+g).value,10)||4; });
+        renderWizardStep(2);
+      });
+    } else if (step === 2) {
+      if (!wizardData.teachers.length) {
+        wizardData.teachers = [];
+        for (let i = 0; i < wizardData.teacherCount; i++) {
+          wizardData.teachers.push({ name: teacherNameByIndex(i), subject: '과학', weekly: 20 });
+        }
+      }
+      box.innerHTML = `
+        <h2>빠른 시작 마법사</h2>
+        <p class="wizard-subtitle">전담교사 정보를 간단히 입력합니다.</p>
+        ${stepsHtml}
+        <div class="btn-row">
+          <label>전담교사 수 <input type="number" min="1" max="26" id="wiz-tcount" value="${wizardData.teacherCount}" style="width:70px"/></label>
+          <button class="btn" type="button" id="wiz-auto-teachers">교사 자동 생성</button>
+        </div>
+        <div class="tt-wrap" style="margin-top:12px">
+          <table class="timetable">
+            <thead><tr><th>이름</th><th>주력 과목</th><th>주당 목표시수</th></tr></thead>
+            <tbody id="wiz-teacher-tbody">
+              ${wizardData.teachers.map((t, i) => `
+                <tr>
+                  <td><input type="text" class="wiz-tn" data-i="${i}" value="${esc(t.name)}" style="width:90px"/></td>
+                  <td><select class="wiz-ts" data-i="${i}">
+                    ${SUBJECT_ORDER.map(s => `<option value="${s}" ${t.subject===s?'selected':''}>${s}</option>`).join('')}
+                  </select></td>
+                  <td><input type="number" min="1" max="60" class="wiz-tw" data-i="${i}" value="${t.weekly}" style="width:70px"/></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="btn-row" style="margin-top:20px;justify-content:space-between">
+          <button class="btn" type="button" id="wiz-prev2">← 이전</button>
+          <button class="btn btn-primary" type="button" id="wiz-next2">다음 →</button>
+        </div>
+      `;
+      document.getElementById('wiz-auto-teachers').addEventListener('click', () => {
+        const n = Math.max(1, Math.min(26, parseInt(document.getElementById('wiz-tcount').value,10)||6));
+        wizardData.teacherCount = n;
+        wizardData.teachers = [];
+        for (let i = 0; i < n; i++) {
+          wizardData.teachers.push({ name: teacherNameByIndex(i), subject: '과학', weekly: 20 });
+        }
+        renderWizardStep(2);
+      });
+      document.getElementById('wiz-prev2').addEventListener('click', () => {
+        saveWizardStep2();
+        renderWizardStep(1);
+      });
+      document.getElementById('wiz-next2').addEventListener('click', () => {
+        saveWizardStep2();
+        renderWizardStep(3);
+      });
+    } else if (step === 3) {
+      const totalClasses = GRADES.reduce((s, g) => s + (wizardData.classCounts[g]||0), 0);
+      box.innerHTML = `
+        <h2>빠른 시작 마법사</h2>
+        <p class="wizard-subtitle">설정을 확인하고 시간표를 생성합니다.</p>
+        ${stepsHtml}
+        <div style="background:#f7f8fa;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px">
+          <p><strong>학교:</strong> ${esc(wizardData.schoolName || '(미입력)')} / ${esc(wizardData.year)}학년도</p>
+          <p><strong>학급 수:</strong> 총 ${totalClasses}학급 (${GRADES.map(g => g+'학년 '+wizardData.classCounts[g]+'반').join(', ')})</p>
+          <p><strong>전담교사:</strong> ${wizardData.teachers.length}명</p>
+          <ul style="font-size:13px;padding-left:20px;margin:4px 0">
+            ${wizardData.teachers.map(t => `<li>${esc(t.name)} — ${esc(t.subject)} (주 ${t.weekly}시수)</li>`).join('')}
+          </ul>
+        </div>
+        <div class="btn-row" style="flex-direction:column;gap:10px">
+          <button class="btn btn-primary" type="button" id="wiz-go-auto" style="width:100%;padding:12px;font-size:15px">기본 설정으로 시간표 자동 생성</button>
+          <button class="btn" type="button" id="wiz-go-basic" style="width:100%;padding:10px">세부 설정으로 이동</button>
+        </div>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn" type="button" id="wiz-prev3">← 이전</button>
+        </div>
+      `;
+      document.getElementById('wiz-go-auto').addEventListener('click', () => {
+        applyWizardAndGenerate();
+      });
+      document.getElementById('wiz-go-basic').addEventListener('click', () => {
+        applyWizardBasicOnly();
+      });
+      document.getElementById('wiz-prev3').addEventListener('click', () => {
+        renderWizardStep(2);
+      });
+    }
+  }
+
+  function saveWizardStep2() {
+    const tbody = document.getElementById('wiz-teacher-tbody');
+    if (!tbody) return;
+    const n = parseInt((document.getElementById('wiz-tcount')||{}).value,10) || wizardData.teacherCount;
+    wizardData.teacherCount = n;
+    tbody.querySelectorAll('.wiz-tn').forEach(inp => {
+      const i = parseInt(inp.dataset.i, 10);
+      if (wizardData.teachers[i]) wizardData.teachers[i].name = inp.value.trim() || teacherNameByIndex(i);
+    });
+    tbody.querySelectorAll('.wiz-ts').forEach(sel => {
+      const i = parseInt(sel.dataset.i, 10);
+      if (wizardData.teachers[i]) wizardData.teachers[i].subject = sel.value;
+    });
+    tbody.querySelectorAll('.wiz-tw').forEach(inp => {
+      const i = parseInt(inp.dataset.i, 10);
+      if (wizardData.teachers[i]) wizardData.teachers[i].weekly = Math.max(1, parseInt(inp.value,10)||20);
+    });
+  }
+
+  function applyWizardData() {
+    state.school.name = wizardData.schoolName;
+    state.school.year = wizardData.year;
+    GRADES.forEach(g => { state.classCounts[g] = wizardData.classCounts[g] || 4; });
+    state.teachers = wizardData.teachers.map((t, i) => ({
+      id: uid('t'),
+      name: t.name || teacherNameByIndex(i),
+      maxDaily: 5,
+      minimizeGaps: true,
+      allocSubject: t.subject || '과학',
+      weeklyTarget: t.weekly || 20,
+      subjects: [],
+      fixed: [],
+      banned: []
+    }));
+    ensureScheduleBuckets(state);
+  }
+
+  async function applyWizardAndGenerate() {
+    applyWizardData();
+    autoAllocateTeacherLoadsFromQuickInputs();
+    ensureScheduleBuckets(state);
+    saveStateNow(state);
+    closeWizard();
+    renderAll();
+    await autoGenerateTimetable();
+    setTab('view-class');
+    saveStateNow(state);
+    renderAll();
+  }
+
+  function applyWizardBasicOnly() {
+    applyWizardData();
+    autoAllocateTeacherLoadsFromQuickInputs();
+    ensureScheduleBuckets(state);
+    saveStateNow(state);
+    closeWizard();
+    setTab('basic');
+    renderAll();
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     ensureScheduleBuckets(state);
     renderAll();
@@ -2956,6 +3474,8 @@
     document.getElementById('btn-ref-toggle').addEventListener('click', toggleRefPanel);
     document.getElementById('ref-panel-close').addEventListener('click', toggleRefPanel);
     document.getElementById('ref-panel-select').addEventListener('change', renderRefPanel);
+
+    if (shouldShowWizard()) showWizard();
   });
   </script>
 </body>
